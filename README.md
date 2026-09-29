@@ -5,47 +5,91 @@
 
 **[Português (BR)](README.pt-BR.md)** · English
 
-One-line description of what this tool does.
+A policy-gated bridge that drives `devin.exe acp` from the outside:
+create/resume isolated Devin sessions per project, send prompts, stream
+results — with a `policy.json` deciding what the session may do.
 
 ## The problem
 
-<!-- Real pain point, with evidence. Who suffers, when, how often. -->
+Devin Desktop sessions are not scriptable. `devin -p` requires an
+interactive `devin auth login`, `devin list` is a TUI, and the
+community snippets that drive `devin.exe acp` directly **auto-approve
+every permission request** — fine for a demo, dangerous to leave running
+against a real repo overnight.
 
 ## Prior art
 
-<!-- What already exists for other agents/tools. Be honest and link it.
-     This project adapts <X>; it does not reinvent it. -->
+This project adapts the proven client from
+`personal-agent-system` (`gateways/src/devin-acp.js`, ~600 lines:
+NDJSON JSON-RPC over stdio, session lifecycle, terminal/fs/permission
+handlers, model/cost notifications) and its dispatcher
+(`scripts/devin-repo-task.js`, repo→sessionId mapping). It does not
+reinvent the protocol — it ports it and adds the missing permission
+gate. See [docs/SPEC.md](docs/SPEC.md).
 
 ## What makes it Devin-native
 
-<!-- The differentiator. Must pass three tests:
-     1. Side-by-side: does it do something the base tool *cannot* do at all?
-     2. No-Devin: does the extra disappear if Devin is removed?
-     3. One sentence: can you explain it without jargon? -->
+- **Side-by-side:** generic ACP clients auto-approve or delegate to the
+  agent's config; this one gates `terminal/*`, `fs/*` and
+  `session/request_permission` through a per-repo `policy.json`
+  (allow/deny/ask, deny-wins, fail-closed by default).
+- **No-Devin:** pointless without it — transport is `devin.exe acp`,
+  auth is the IDE's `windsurf_api_key` from `credentials.toml` (no PKCE
+  login), sessions show up grouped by repo in Devin Desktop.
+- **One sentence:** *drive Devin from the outside, with a seatbelt.*
 
 ## Install
 
 ```bash
-pipx install devin-bridge
+git clone https://github.com/Icaro0310/devin-bridge.git
+cd devin-bridge
+npm install -g .        # or: npm link
 ```
+
+Requires Node ≥ 20 and a signed-in Devin Desktop (it reads the session
+token from `%APPDATA%\devin\credentials.toml`; the token is never logged
+or persisted).
 
 ## Usage
 
 ```bash
-devin-bridge --help
+# optional: write a policy for the current project
+devin-bridge policy --init          # creates ./policy.json (see policy.example.json)
+
+# create an isolated session for a repo (recorded in .sessions.json)
+devin-bridge new C:\path\to\repo
+
+# dispatch a prompt — resumes the mapped session automatically
+devin-bridge prompt C:\path\to\repo "run the test suite and fix failures"
+devin-bridge prompt C:\path\to\repo --file docs\KICKOFF-M1.md --yes
+
+# inspect
+devin-bridge sessions
+devin-bridge policy --check terminal "rm -rf /"
 ```
+
+Policy `ask` decisions prompt the operator interactively on a TTY;
+non-interactive runs stay fail-closed unless `--yes` is passed.
 
 ## Limitations
 
-<!-- Be explicit: private/volatile internals, version-specific behavior,
-     what it does NOT do. -->
+- Uses the **undocumented** `acp` mode and `_meta.api_key` auth of the
+  bundled `devin.exe`; both may change without notice (authenticated
+  against Devin CLI 3000.10.x).
+- Windows-first (paths, spawn semantics); works on Linux CI for tests
+  but real sessions target the Windows Desktop install.
+- `session/load` cannot steal a session open elsewhere — it fails
+  `session_locked` and the dispatcher falls back to `session/new`.
+- Does not expose agent-side MCP servers (`mcpServers: []` is sent).
 
 ## Development
 
 ```bash
-pip install -e ".[dev]"
-pytest
+npm test        # node --test — stdlib runner, zero deps
 ```
+
+Tests use a scripted fake ACP agent (`tests/fixtures/fake-acp.mjs`) over
+real stdio — no `devin.exe` needed.
 
 ## License
 
