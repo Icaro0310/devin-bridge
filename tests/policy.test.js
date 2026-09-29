@@ -3,9 +3,12 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Policy, globToRegExp, normalizeFsPath, defaultPolicy } from "../src/policy.js";
+import fs from "node:fs";
 
-const FIXTURES = path.dirname(fileURLToPath(import.meta.url)) + "/fixtures";
+import { Policy, globToRegExp, normalizeFsPath, defaultPolicy, examplePolicyDoc } from "../src/policy.js";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURES = HERE + "/fixtures";
 
 // Portable absolute-ish root for fs tests (kept as posix form inside Policy).
 const ROOT = path.resolve("/repo");
@@ -212,5 +215,12 @@ describe("Policy — loading and defaults", () => {
     const doc = { version: 1, defaults: { terminal: "allow" } };
     const p = new Policy(doc);
     assert.deepEqual(p.toJSON().defaults.terminal, "allow");
+  });
+
+  it("policy.example.json stays in sync with examplePolicyDoc()", () => {
+    const onDisk = JSON.parse(
+      fs.readFileSync(path.resolve(HERE, "..", "policy.example.json"), "utf8"),
+    );
+    assert.deepEqual(onDisk, examplePolicyDoc());
   });
 });

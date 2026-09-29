@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "defaults": {
+    "terminal": "ask",
+    "fsRead": "ask",
+    "fsWrite": "ask",
+    "network": "ask",
+    "permission": "ask"
+  },
+  "terminal": {
+    "allow": ["git status", "git diff*", "git log*", "npm test*", "node --test*"],
+    "deny": ["rm -rf*", "rmdir /s*", "del /f /s*", "format *", "curl*|*sh*", "wget*|*sh*"]
+  },
+  "fs": {
+    "read": {
+      "allow": ["**"],
+      "deny": ["**/.env", "**/.env.*", "**/credentials*", "**/*.pem", "**/*.key", "**/id_rsa*"]
+    },
+    "write": {
+      "allow": [],
+      "deny": ["**/.env", "**/.env.*", "**/credentials*", "**/.git/**"]
+    }
+  },
+  "network": {
+    "allow": [],
+    "deny": ["*.onion", "169.254.169.254", "localhost", "127.*"]
+  }
+}
