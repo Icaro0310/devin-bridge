@@ -7,6 +7,17 @@ on:
 
 jobs:
   test:
-    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@main
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        node: [22, 24]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --test tests/
   secrets-scan:
     uses: Icaro0310/devin-powerups/.github/workflows/redact-check.yml@main

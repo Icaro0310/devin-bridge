@@ -1,12 +1,16 @@
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.venv/
-venv/
+node_modules/
+npm-debug.log*
+*.tgz
 dist/
 build/
 .env
 *.db
 *.db-shm
 *.db-wal
+coverage/
+.nyc_output/
+
+# Local session state — never committed (root-anchored; fixtures exempt)
+.devin/
+/.sessions.json
+/policy.json

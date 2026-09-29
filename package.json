@@ -1,0 +1,39 @@
+{
+  "name": "devin-bridge",
+  "version": "0.1.0",
+  "description": "Policy-gated bridge that drives `devin.exe acp` — isolated Devin sessions per project, prompts, streamed results, permission policy file.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "devin-bridge": "bin/devin-bridge.js"
+  },
+  "exports": {
+    ".": "./src/acp-client.js",
+    "./acp-client": "./src/acp-client.js",
+    "./policy": "./src/policy.js",
+    "./dispatch": "./src/dispatch.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "policy.example.json"
+  ],
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "author": "Icaro0310",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Icaro0310/devin-bridge.git"
+  },
+  "keywords": [
+    "devin",
+    "acp",
+    "agent-client-protocol",
+    "policy",
+    "sessions"
+  ]
+}
