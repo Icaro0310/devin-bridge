@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 import fs from "node:fs";
@@ -125,7 +126,9 @@ describe("Policy — fs", () => {
   });
 
   it("paths outside root still match absolute deny patterns", () => {
-    const abs = path.resolve("C:/Windows/System32/credentials.txt");
+    // os.tmpdir() is outside the project root on every platform —
+    // a hardcoded "C:/..." path would resolve *inside* root on POSIX.
+    const abs = path.join(os.tmpdir(), "credentials.txt");
     assert.equal(policy.checkFsRead(abs), "deny");
   });
 });
