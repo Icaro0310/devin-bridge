@@ -22,7 +22,7 @@
     "policy.example.json"
   ],
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test"
   },
   "author": "Icaro0310",
   "repository": {
