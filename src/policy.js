@@ -60,7 +60,9 @@ export function globToRegExp(pattern, { command = false, caseSensitive = true } 
         while (pat[i + 1] === "*") i++;
         re += ".*";
       } else if (pat[i + 1] === "*") {
-        if (pat[i + 2] === "/") { re += "(?:[^/]+/)*"; i += 2; }
+        // [^/]* (not [^/]+) so "**/" also matches POSIX absolute paths
+        // whose leading "/" is an empty first segment, e.g. /tmp/x.
+        if (pat[i + 2] === "/") { re += "(?:[^/]*/)*"; i += 2; }
         else { re += ".*"; i += 1; }
       } else {
         re += "[^/]*";
