@@ -69,3 +69,8 @@ always-on; the skill is model-triggered.
 ```bash
 pytest -q   # behavioral matrix: trivial→0, units→min(N,3), nested→0, ...
 ```
+
+## Platform support
+
+Workspace-level policy and thin wrappers — no platform-specific code.
+Runs wherever Devin runs; CI tests on `windows-latest` + `ubuntu-latest`.

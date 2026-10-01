@@ -56,3 +56,9 @@ always-on; a skill é acionada pelo modelo.
 ```bash
 pytest -q   # matriz comportamental: trivial→0, unidades→min(N,3), aninhado→0, ...
 ```
+
+## Suporte de plataformas
+
+Política de workspace e wrappers finos — sem código específico de
+plataforma. Corre onde o Devin correr; o CI testa em `windows-latest` +
+`ubuntu-latest`.
