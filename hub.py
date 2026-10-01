@@ -19,8 +19,14 @@ ROOT = Path(__file__).resolve().parent
 INDEX = (ROOT / "index.html").read_bytes()
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
 STALE_AFTER_S = 15
+CMD_FILE = ROOT / "cmd_queue.json"
+CMD_STALE_S = 120          # claimed sem ack há >2min → re-deliver
+CMD_KEEP_S = 3600          # purga comandos terminados após 1h
+MAX_TEXT = 4000
+ACTIONS = {"message", "spawn", "kill"}
 
 STATE_LOCK = threading.Lock()
+CMD_LOCK = threading.Lock()
 STATE_CACHE = {
     "ts": int(time.time()),
     "agents": [],
@@ -29,6 +35,94 @@ STATE_CACHE = {
     "loading": True,
 }
 LAST_INGEST = {"at": 0.0}
+
+
+def _load_cmds() -> list:
+    try:
+        return json.loads(CMD_FILE.read_text(encoding="utf-8")).get("cmds", [])
+    except Exception:
+        return []
+
+
+def _save_cmds(cmds: list) -> None:
+    tmp = CMD_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"cmds": cmds}, ensure_ascii=False),
+                   encoding="utf-8")
+    tmp.replace(CMD_FILE)
+
+
+def cmd_pending() -> list:
+    """Devolve queued (ou claimed-expirado) e marca-os claimed atomicamente."""
+    now = time.time()
+    with CMD_LOCK:
+        cmds = _load_cmds()
+        out = []
+        for c in cmds:
+            if (c["status"] == "queued" or
+                    (c["status"] == "claimed"
+                     and now - c.get("claimed_at", 0) > CMD_STALE_S)):
+                c["status"] = "claimed"
+                c["claimed_at"] = now
+                out.append(c)
+        if out:
+            _save_cmds(cmds)
+    return [{"id": c["id"], "action": c["action"], "target": c["target"],
+             "text": c["text"], "at": c["at"]} for c in out]
+
+
+def cmd_enqueue(payload: dict):
+    action = str(payload.get("action") or "")
+    target = str(payload.get("target") or "")[:200]
+    text = str(payload.get("text") or "")[:MAX_TEXT]
+    if action not in ACTIONS:
+        return None, f"unknown action {action!r}"
+    if action in ("message", "kill") and not target:
+        return None, "target required"
+    if action in ("message", "spawn") and not text.strip():
+        return None, "text required"
+    cmd = {"id": f"c{int(now := time.time())}{os.urandom(2).hex()}",
+           "action": action, "target": target, "text": text,
+           "at": int(now), "status": "queued", "claimed_at": 0,
+           "result": "", "acked_at": 0}
+    with CMD_LOCK:
+        cmds = _load_cmds()
+        cmds.append(cmd)
+        _save_cmds(cmds)
+    return cmd["id"], None
+
+
+def cmd_ack(payload: dict):
+    cid = str(payload.get("id") or "")
+    status = str(payload.get("status") or "")[:60]
+    result = str(payload.get("result") or "")[:500]
+    if not cid:
+        return False
+    now = time.time()
+    with CMD_LOCK:
+        cmds = _load_cmds()
+        found = False
+        for c in cmds:
+            if c["id"] == cid:
+                c["status"] = status or c["status"]
+                c["result"] = result
+                c["acked_at"] = now
+                found = True
+        # purga de terminados antigos
+        terminal = {"delivered", "spawned", "interrupted", "interrupt-sent",
+                    "queued-manual", "unsupported", "error"}
+        cmds = [c for c in cmds
+                if not (c["status"] in terminal and now - c.get("acked_at", now) > CMD_KEEP_S)]
+        _save_cmds(cmds)
+    return found
+
+
+def cmd_acks() -> list:
+    with CMD_LOCK:
+        cmds = _load_cmds()
+    return [{"id": c["id"], "action": c["action"], "target": c["target"],
+             "status": c["status"], "result": c.get("result", ""),
+             "at": c.get("acked_at") or c.get("at", 0)}
+            for c in cmds if c.get("acked_at") or c["status"] != "queued"][-30:]
 
 
 def current_state() -> dict:
@@ -62,6 +156,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/state"):
             self._send(200, json.dumps(current_state()).encode())
+        elif self.path.startswith("/api/cmd/pending"):
+            self._send(200, json.dumps({"pending": cmd_pending()}).encode())
+        elif self.path.startswith("/api/cmd/acks"):
+            self._send(200, json.dumps({"acks": cmd_acks()}).encode())
         elif self.path.startswith("/api/health"):
             self._send(200, json.dumps({"ok": True, "uptimeHint": LAST_INGEST["at"]}).encode())
         elif self.path in ("/", "/index.html"):
@@ -84,7 +182,8 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, target.read_bytes(), ctype)
 
     def do_POST(self):
-        if not self.path.startswith("/api/ingest"):
+        if not (self.path.startswith("/api/ingest")
+                or self.path.startswith("/api/cmd")):
             self._send(404, b"404", "text/plain")
             return
         if TOKEN and self.headers.get("X-Office-Token") != TOKEN:
@@ -95,6 +194,18 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length) or b"{}")
         except Exception as exc:
             self._send(400, json.dumps({"error": str(exc)}).encode())
+            return
+        if self.path.startswith("/api/cmd/ack"):
+            ok = cmd_ack(payload)
+            self._send(200 if ok else 404,
+                       json.dumps({"ok": ok}).encode())
+            return
+        elif self.path.startswith("/api/cmd"):
+            cid, err = cmd_enqueue(payload)
+            if err:
+                self._send(400, json.dumps({"error": err}).encode())
+            else:
+                self._send(200, json.dumps({"ok": True, "id": cid}).encode())
             return
         with STATE_LOCK:
             global STATE_CACHE

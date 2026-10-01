@@ -101,6 +101,25 @@
   .dot.running { background: var(--green); }
   .dot.idle    { background: var(--amber); }
   .dot.failed  { background: var(--red); }
+  .dot.waiting { background: var(--blue); }
+
+  /* waiting indicator — só o balão anima (steps = pixel feel) */
+  .npc .alert {
+    display: none;
+    position: absolute; left: 50%; top: -46px; transform: translateX(-50%);
+    width: 20px; height: 20px; text-align: center;
+    background: var(--amber); color: #14161f;
+    border: 2px solid #0d0f18; border-radius: 3px;
+    font: 700 13px/18px "Consolas", monospace;
+    box-shadow: 0 2px 0 rgba(0,0,0,.45);
+    animation: alertbob 1.4s steps(2, jump-none) infinite;
+    z-index: 6; pointer-events: none;
+  }
+  .npc.waiting .alert { display: block; }
+  @keyframes alertbob {
+    0%, 100% { margin-top: 0; }
+    50%      { margin-top: -5px; }
+  }
 
   /* service counter (top wall, right side) */
   #svcbar { position: absolute; top: 6px; right: 14px; display: flex; gap: 10px; align-items: flex-start; z-index: 4; }
@@ -189,6 +208,39 @@
     background: #262b42; border: 1px solid var(--line); color: var(--dim); cursor: pointer;
   }
   .chip.active { color: var(--green); border-color: var(--green); }
+  /* ── control UI (inspector + spawn card) ── */
+  .ctl { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+  .ctl-row { display: flex; gap: 6px; }
+  .ctl input[type=text] {
+    flex: 1; min-width: 0; background: #14161f; color: var(--txt);
+    border: 1px solid var(--line); border-radius: 3px; padding: 5px 7px;
+    font: 11px "Consolas", monospace; outline: none;
+  }
+  .ctl input[type=text]:focus { border-color: var(--blue); }
+  .ctl button, .btn {
+    background: #262b42; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 3px; padding: 5px 10px; cursor: pointer;
+    font: 700 10px "Consolas", monospace; letter-spacing: .08em;
+  }
+  .ctl button:hover, .btn:hover { border-color: var(--green); color: var(--green); }
+  .btn.danger:hover { border-color: var(--red); color: var(--red); }
+  .cmd-status {
+    margin-top: 6px; font: 10px/1.5 "Consolas", monospace; color: var(--dim);
+    min-height: 14px; word-break: break-word;
+  }
+  .cmd-status.ok { color: var(--green); }
+  .cmd-status.err { color: var(--red); }
+  .files-list { font: 10px/1.6 "Consolas", monospace; color: var(--dim); }
+  .files-list div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
+  .station { cursor: default; }
+  .station.spawnable { cursor: pointer; }
+  .station.spawnable::after {
+    content: "+"; position: absolute; left: 60px; top: 100px; width: 48px;
+    text-align: center; color: var(--green); font: 700 14px/1 "Consolas", monospace;
+    opacity: 0; transition: opacity .15s;
+  }
+  .station.spawnable:hover::after { opacity: .9; }
+
   .attrib { font: 9.5px/1.5 "Consolas", monospace; color: #5a6080; margin-top: auto; }
   .attrib a { color: #7c86b8; }
 
@@ -231,6 +283,15 @@
   <aside id="panel">
     <div class="card"><h3>ON THE FLOOR <span id="n-ent"></span></h3><div id="ents"></div></div>
     <div class="card" id="inspector"><h3>INSPECTOR</h3><div id="insp-body"><span style="color:var(--dim)">Select an entity.</span></div></div>
+    <div class="card"><h3>SPAWN</h3>
+      <div class="ctl" style="border-top:none;padding-top:0;margin-top:0">
+        <div class="ctl-row">
+          <input type="text" id="spawn-text" placeholder="task for a new worker…" maxlength="2000">
+          <button id="spawn-btn">SPAWN</button>
+        </div>
+        <div class="cmd-status" id="spawn-status"></div>
+      </div>
+    </div>
     <div class="card"><h3>MCP &amp; AMBIENT</h3><div class="chips" id="svcchips"></div></div>
     <div class="attrib">
       Office assets: pixel-agents (MIT) via harishkotra/agent-office. Personal project — no distribution.
@@ -323,6 +384,7 @@ function spawn(id, meta) {
   el.style.top = DOOR.y + "px";
   el.innerHTML =
     `<div class="spr" style="background-image:url('${meta.sprite}')"></div>` +
+    `<div class="alert">!</div>` +
     `<div class="tag"><span class="dot ${meta.state}"></span>${esc(meta.name)}</div>` +
     `<div class="tool"></div>`;
   el.addEventListener("click", () => select(id));
@@ -425,12 +487,20 @@ function renderStations() {
   st.innerHTML = "";
   for (const d of [...agentDesks, ...workerDesks]) {
     const div = document.createElement("div");
-    div.className = "station";
+    div.className = "station spawnable";
     div.style.left = d.x + "px"; div.style.top = d.y + "px";
     div.innerHTML =
       `<img class="desk px" src="assets/furniture/desk_front.png" alt="">` +
       `<img class="pc px pc-off" src="assets/furniture/pc_off.png" alt="">` +
       `<img class="chair px" src="assets/furniture/chair_front.png" alt="">`;
+    div.addEventListener("click", () => {
+      const occupied = [...entities.values()].some(r => r.meta.desk === d);
+      if (!occupied) {
+        setPanel(true);
+        const inp = $("#spawn-text");
+        if (inp) inp.focus();
+      }
+    });
     st.appendChild(div);
     d.el = div; d.pc = div.querySelector(".pc");
   }
@@ -468,8 +538,13 @@ function reconcile(state) {
       desk: deskOf.get(id),
       title: a.title, model: a.model, project: a.project,
       tool: a.currentTool, toolTitle: a.currentToolTitle,
+      toolArgs: a.lastToolArgs || "",
       toolCount: a.toolCount, lastActivity: a.lastActivity,
       subs: a.subagents || [],
+      sid: a.id,
+      files: a.files || [],
+      waiting: !!a.waiting,
+      locked: !!a.locked,
     };
     if (!entities.has(id) && !departed.has(id)) spawn(id, meta);
     const rec = entities.get(id);
@@ -494,6 +569,8 @@ function reconcile(state) {
         name: wname, kind: "worker", race: wrace.label, state: s.state,
         sprite: `assets/chars/${wrace.f}.png`,
         desk: deskOf.get(wid), title: s.title, profile: s.profile,
+        sid: a.id, subIdx: j,
+        tool: s.lastTool || null, files: s.files || [],
       };
       if (!entities.has(wid)) spawn(wid, wm);
       const wr = entities.get(wid);
@@ -514,8 +591,9 @@ function reconcile(state) {
 }
 
 function updateTag(rec) {
+  rec.el.classList.toggle("waiting", !!rec.meta.waiting);
   rec.el.querySelector(".tag").innerHTML =
-    `<span class="dot ${rec.meta.state}"></span>${esc(rec.meta.name)}`;
+    `<span class="dot ${rec.meta.waiting ? "waiting" : rec.meta.state}"></span>${esc(rec.meta.name)}`;
   rec.el.querySelector(".tool").textContent =
     (rec.meta.state === "working" || rec.meta.state === "running")
       ? (rec.meta.tool || rec.meta.title || "") : "";
@@ -579,6 +657,7 @@ function renderTicker(events) {
 }
 
 function select(id) {
+  if (id !== selId) { inspState.msgText = ""; inspState.cmdText = ""; inspState.cmdCls = ""; }
   selId = id;
   setPanel(true);
   renderEnts();
@@ -597,21 +676,108 @@ function select(id) {
   if (rec) renderInspector(rec.meta);
 }
 
+const inspState = { msgText: "", msgFocus: false, cmdText: "", cmdCls: "" };
 function renderInspector(m) {
+  // preserva input/status através dos re-renders do polling
+  const prev = $("#msg-text"), prevStatus = $("#cmd-status");
+  if (prev) {
+    inspState.msgText = prev.value;
+    inspState.msgFocus = document.activeElement === prev;
+  }
+  if (prevStatus) {
+    inspState.cmdText = prevStatus.textContent;
+    inspState.cmdCls = prevStatus.className;
+  }
+  const files = (m.files || []).slice(-6);
+  let ctl = "";
+  if (m.kind === "agent" && m.sid) {
+    ctl = `<div class="ctl">
+      <div class="ctl-row">
+        <input type="text" id="msg-text" placeholder="message ${esc(m.name)}…" maxlength="2000">
+        <button id="msg-send">SEND</button>
+      </div>
+      <div class="cmd-status" id="cmd-status">${esc(inspState.cmdText)}</div>
+    </div>`;
+  } else if (m.kind === "worker" && m.sid != null) {
+    ctl = `<div class="ctl">
+      <div class="ctl-row"><button class="btn danger" id="w-stop">■ STOP WORKER</button></div>
+      <div class="cmd-status" id="cmd-status">${esc(inspState.cmdText)}</div>
+    </div>`;
+  }
   $("#insp-body").innerHTML = `<dl class="kv">
     <dt>name</dt><dd>${esc(m.name)}</dd>
     ${m.race ? `<dt>class</dt><dd>${esc(m.race)}</dd>` : ""}
-    <dt>type</dt><dd>${esc(m.kind)} · ${esc(m.state)}</dd>
+    <dt>type</dt><dd>${esc(m.kind)} · ${esc(m.state)}${m.waiting ? ' · <span style="color:var(--amber)">waiting</span>' : ""}</dd>
     ${m.title ? `<dt>task</dt><dd>${esc(m.title)}</dd>` : ""}
     ${m.project ? `<dt>project</dt><dd>${esc(m.project)}</dd>` : ""}
     ${m.model ? `<dt>model</dt><dd>${esc(m.model)}</dd>` : ""}
-    ${m.tool ? `<dt>current tool</dt><dd>${esc(m.tool)}</dd>` : ""}
+    ${m.tool ? `<dt>current tool</dt><dd>${esc(m.tool)}${m.toolArgs ? ` — <span style="color:var(--dim)">${esc(m.toolArgs)}</span>` : ""}</dd>` : ""}
     ${m.toolCount != null ? `<dt>tool calls</dt><dd>${m.toolCount}</dd>` : ""}
     ${m.lastActivity ? `<dt>last activity</dt><dd>${new Date(m.lastActivity * 1000).toLocaleTimeString()}</dd>` : ""}
     ${m.profile ? `<dt>profile</dt><dd>${esc(m.profile)}</dd>` : ""}
     ${m.subs ? `<dt>subagents</dt><dd>${m.subs.length}</dd>` : ""}
-  </dl>`;
+  </dl>
+  ${files.length ? `<h3 style="margin:10px 0 4px">FILES TOUCHED</h3>
+    <div class="files-list">${files.map(f => `<div>${esc(f)}</div>`).join("")}</div>` : ""}
+  ${ctl}`;
+  if (m.kind === "agent" && m.sid) {
+    const input = $("#msg-text"), btn = $("#msg-send");
+    input.value = inspState.msgText;
+    if (inspState.msgFocus) input.focus();
+    const send = () => {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = ""; inspState.msgText = "";
+      sendCmd({ action: "message", target: m.sid, text }, $("#cmd-status"));
+    };
+    btn.addEventListener("click", send);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+  } else if (m.kind === "worker" && m.sid != null) {
+    $("#w-stop").addEventListener("click", () =>
+      sendCmd({ action: "kill", target: `${m.sid}:${m.subIdx}`, text: m.title || "" },
+              $("#cmd-status")));
+  }
 }
+
+/* ── command path ─────────────────────────────────────────── */
+const cmdWatch = new Map();   // cmdId -> status element
+async function sendCmd(cmd, statusEl) {
+  try {
+    const r = await fetch("/api/cmd", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cmd),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (statusEl) { statusEl.textContent = `» queued ${d.id}`; statusEl.className = "cmd-status"; }
+    if (statusEl) cmdWatch.set(d.id, statusEl);
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = `✗ ${e.message}`; statusEl.className = "cmd-status err"; }
+  }
+}
+async function pollAcks() {
+  if (!cmdWatch.size) return;
+  try {
+    const r = await fetch("/api/cmd/acks", { cache: "no-store" });
+    const d = await r.json();
+    for (const a of d.acks || []) {
+      const el = cmdWatch.get(a.id);
+      if (!el) continue;
+      const icon = { delivered: "✓", spawned: "✓", interrupted: "✓",
+        "interrupt-sent": "✓", error: "✗", unsupported: "✗",
+        "queued-manual": "✎", running: "…", dispatched: "…" }[a.status] || "·";
+      const txt = `${icon} ${a.status}${a.result ? " — " + a.result : ""}`.slice(0, 220);
+      const cls = "cmd-status " + (["error", "unsupported"].includes(a.status) ? "err" : "ok");
+      inspState.cmdText = txt; inspState.cmdCls = cls;   // sobrevive a re-renders
+      if (el.isConnected) { el.textContent = txt; el.className = cls; }
+      else { const cur = $("#cmd-status"); if (cur) { cur.textContent = txt; cur.className = cls; } }
+      if (!["running", "dispatched", "claimed", "queued"].includes(a.status)) {
+        setTimeout(() => cmdWatch.delete(a.id), 45000);
+      }
+    }
+  } catch {}
+}
+setInterval(pollAcks, 2500);
 
 /* ── panel drawer ─────────────────────────────────────────── */
 const pt = $("#panel-toggle");
@@ -652,6 +818,17 @@ async function poll() {
     $("#live").textContent = "OFFLINE"; $("#live").classList.add("off");
   }
 }
+/* spawn card */
+$("#spawn-btn").addEventListener("click", () => {
+  const inp = $("#spawn-text"), text = inp.value.trim();
+  if (!text) return;
+  inp.value = "";
+  sendCmd({ action: "spawn", target: "", text }, $("#spawn-status"));
+});
+$("#spawn-text").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("#spawn-btn").click();
+});
+
 poll(); setInterval(poll, 2500);
 </script>
 </body>

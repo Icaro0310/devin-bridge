@@ -18,13 +18,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-SESSIONS_DB = Path(os.environ.get("APPDATA", "")) / "devin" / "cli" / "sessions.db"
+APPDATA = Path(os.environ.get("APPDATA", ""))
+SESSIONS_DB = APPDATA / "devin" / "cli" / "sessions.db"
+SESSION_LOCKS = APPDATA / "devin" / "cli" / "session_locks"
+ACP_MSG_DIR = APPDATA / "devin" / "User" / "acp-messages"
+VSCDB = APPDATA / "devin" / "User" / "globalStorage" / "state.vscdb"
 JEV_DB = ROOT.parent / "jev_log.db"
 ACTIVE_WINDOW_S = 15 * 60  # sessão "viva" se teve atividade nos últimos 15 min
 SUBAGENT_TTL_S = 30 * 60
+WAIT_GRACE_S = 20          # turno "terminado" se última msg é texto puro há >20s
+MAX_FILES = 6
 
 AGENT_ID_RE = re.compile(r"agent_id=([0-9a-f\-]+)")
 COMPLETION_RE = re.compile(r"agent_id=([0-9a-f\-]+) completed")
+FILE_RE = re.compile(r"^([A-Za-z]:[\\/]|\.{0,2}[\\/]|/|\w+[/\\])")
 
 
 def ro(path: Path) -> sqlite3.Connection:
@@ -36,6 +43,112 @@ def jload(s):
         return json.loads(s)
     except Exception:
         return None
+
+
+def session_locked(sid: str) -> bool:
+    """Lock file é mantido (OS-level) enquanto a sessão está aberta num
+    processo devin (GUI ou CLI). Se conseguimos abrir p/ escrita → livre."""
+    f = SESSION_LOCKS / f"{sid}.lock"
+    if not f.exists():
+        return False
+    try:
+        fd = os.open(str(f), os.O_RDWR)
+        os.close(fd)
+        return False
+    except OSError:
+        return True
+
+
+def acp_map() -> dict:
+    """session_id -> acp-messages db path, via state.vscdb do Devin Desktop."""
+    out = {}
+    if not VSCDB.exists():
+        return out
+    try:
+        db = ro(VSCDB)
+        prefix = "windsurf.acp.messageStore.session.acp/devin-cli/"
+        for k, v in db.execute(
+            "select key, value from ItemTable where key like ?", (prefix + "%",)
+        ):
+            sid = k[len(prefix):]
+            uuid = (jload(v) or {}).get("uuid")
+            if sid and uuid:
+                f = ACP_MSG_DIR / f"{uuid}.db"
+                if f.exists():
+                    out[sid] = f
+        db.close()
+    except Exception:
+        pass
+    return out
+
+
+def acp_subagents(path: Path) -> list:
+    """Lê mensagens kind='subagent' da ACP db de uma sessão GUI.
+    Cada uma tem status real + childMessages (tool calls do worker)."""
+    subs = []
+    try:
+        db = ro(path)
+        for (pl,) in db.execute(
+            "select payload from messages where kind='subagent' "
+            "order by position asc limit 40"
+        ):
+            d = jload(pl) or {}
+            kids = d.get("childMessages") or []
+            tools = [m.get("content") or {} for m in kids
+                     if m.get("kind") == "tool_call"]
+            last = tools[-1] if tools else {}
+            files = []
+            for c in tools:
+                for p in extract_files(c.get("rawInput") or {},
+                                       c.get("locations")):
+                    if p not in files:
+                        files.append(p)
+            subs.append({
+                "agentId": d.get("agentId"),
+                "title": d.get("title") or "",
+                "profile": d.get("profile") or "?",
+                "state": ("running" if d.get("status") == "running"
+                          else "completed"),
+                "status": d.get("status"),
+                "lastTool": last.get("title") or None,
+                "lastToolStatus": last.get("status"),
+                "files": files[-MAX_FILES:],
+            })
+        db.close()
+    except Exception:
+        pass
+    return subs
+
+
+PATH_KEYS = ("file_path", "target_file", "path", "filename")
+
+
+def extract_files(raw: dict, locations=None) -> list:
+    out = []
+    for k in PATH_KEYS:
+        v = raw.get(k)
+        if isinstance(v, str) and FILE_RE.match(v):
+            out.append(v)
+    for loc in locations or []:
+        if isinstance(loc, dict) and loc.get("path"):
+            out.append(str(loc["path"]))
+    return out
+
+
+def short_args(raw: dict) -> str:
+    if not raw:
+        return ""
+    if raw.get("command"):
+        return str(raw["command"]).splitlines()[0][:70]
+    for k in ("file_path", "path", "pattern", "query", "url", "agent_id"):
+        if raw.get(k):
+            return str(raw[k])[:70]
+    if raw.get("server_name"):
+        return f"{raw['server_name']}/{raw.get('tool_name', '')}"[:70]
+    for v in raw.values():
+        if isinstance(v, str) and v:
+            return v[:70]
+    return ""
 
 
 def inference_name(tc_json: dict) -> str:
@@ -69,6 +182,7 @@ def collect_state() -> dict:
     per_session_tools = {}
     events = []
     completed_by_session = {}
+    last_nodes = {}
     if active_ids:
         placeholders = ",".join("?" for _ in active_ids)
         tool_rows = db.execute(
@@ -86,10 +200,23 @@ def collect_state() -> dict:
                 "kind": d.get("kind"),
                 "status": u.get("status"),
                 "raw": d.get("rawInput") or {},
+                "locations": d.get("locations"),
                 "rid": rid,
             }
             per_session_tools.setdefault(sid, []).append(entry)
             events.append((rid, sid, entry))
+
+        # último nó de mensagem por sessão → detecta "awaiting input"
+        for sid in active_ids:
+            row = db.execute(
+                "select chat_message from message_nodes where session_id=? "
+                "order by row_id desc limit 1", (sid,)).fetchone()
+            d = jload(row[0]) if row else None
+            if d:
+                last_nodes[sid] = {
+                    "role": d.get("role"),
+                    "has_tools": bool(d.get("tool_calls")),
+                }
 
         # completions de subagentes (role=system na chain do pai)
         for sid, cm in db.execute(
@@ -103,6 +230,8 @@ def collect_state() -> dict:
                 COMPLETION_RE.findall(cm or "")
             )
 
+    acp_by_sid = acp_map()
+
     # sessions ativas → NPCs
     for sid, title, model, mode, last_act, cwd, created, hidden in sessions:
         if hidden or now - (last_act or 0) > ACTIVE_WINDOW_S:
@@ -112,18 +241,52 @@ def collect_state() -> dict:
         subs = []
         n_completed = completed_by_session.get(sid, 0)
         n_spawned = 0
+        acp_subs = acp_subagents(acp_by_sid[sid]) if sid in acp_by_sid else []
+        used_acp = set()
         for t in tools:
             if t["name"] == "run_subagent":
                 n_spawned += 1
                 # heurística smoke: completions ≥ spawns desta sessão → done
                 state_sub = ("completed" if n_completed >= n_spawned
                              else "running")
-                subs.append({
+                sub = {
                     "profile": t["raw"].get("profile", "?"),
                     "title": t["raw"].get("title", "subagent"),
                     "state": state_sub,
                     "rid": t["rid"],
-                })
+                }
+                # enriquece com a ACP db do GUI (status real + child tools)
+                for i, a in enumerate(acp_subs):
+                    if i in used_acp:
+                        continue
+                    if a["title"] and a["title"] == sub["title"]:
+                        sub["state"] = a["state"]
+                        sub["lastTool"] = a.get("lastTool")
+                        sub["lastToolStatus"] = a.get("lastToolStatus")
+                        sub["files"] = a.get("files", [])
+                        used_acp.add(i)
+                        break
+                subs.append(sub)
+
+        # files recentemente tocados (dedupe, mais recente por último)
+        files = []
+        for t in tools:
+            for p in extract_files(t["raw"], t.get("locations")):
+                if p not in files:
+                    files.append(p)
+        files = files[-MAX_FILES:]
+
+        # waiting: pedido de permissão pendente OU turno terminado à espera
+        # do utilizador (última msg = texto puro do assistant, sessão aberta).
+        node = last_nodes.get(sid) or {}
+        waiting = bool(
+            (last_tool and last_tool["status"] == "pending")
+            or (session_locked(sid)
+                and node.get("role") == "assistant"
+                and not node.get("has_tools")
+                and now - (last_act or 0) > WAIT_GRACE_S)
+        )
+
         agent = {
             "id": sid,
             "kind": "agent",
@@ -135,6 +298,10 @@ def collect_state() -> dict:
                       else "idle" if now - (last_act or 0) > 120 else "working"),
             "currentTool": (last_tool["name"] if last_tool else None),
             "currentToolTitle": (last_tool["title"] if last_tool else ""),
+            "lastToolArgs": (short_args(last_tool["raw"]) if last_tool else ""),
+            "files": files,
+            "waiting": waiting,
+            "locked": session_locked(sid),
             "toolCount": len(tools),
             "lastActivity": last_act,
             "subagents": subs,

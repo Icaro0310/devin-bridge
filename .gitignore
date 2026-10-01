@@ -4,3 +4,7 @@ __pycache__/
 ai-src/
 *.pyc
 .env
+cmd_inbox/
+outbox/
+state/
+cmd_queue.json

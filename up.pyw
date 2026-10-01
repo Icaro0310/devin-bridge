@@ -21,6 +21,9 @@ JOBS = {
         "-L", "8790:127.0.0.1:8790", "devin-vm",
     ],
     "probe": [sys.executable, str(ROOT / "probe.py"), "--interval", "3"],
+    # executor ACP: o probe tb o lança lazy se faltar; a guarda de
+    # instância única (state/executor.pid) evita duplicados.
+    "executor": [sys.executable, str(ROOT / "executor.py")],
 }
 
 

@@ -4,12 +4,21 @@
 Recolhe o WorldState (sessions.db, jev_log.db, heartbeat) e faz POST para
 o hub na VM apenas quando o estado muda. Pensado para ~20 MB de RAM.
 
+Também faz a ponte de comandos (control path):
+  GET  /api/cmd/pending   → escreve office/cmd_inbox/<id>.json p/ executor.py
+  outbox/<id>.json        → POST /api/cmd/ack {id,status,result}
+
+O executor (office/executor.py) fala ACP com `devin acp` e é quem executa
+message/spawn/kill a sério. Se não estiver vivo, o probe lança-o detached —
+up.pyw também o supervisiona.
+
 Uso: python office/probe.py [--hub http://100.102.159.65:8790] [--interval 3]
 Env: OFFICE_TOKEN — enviado como X-Office-Token se definido.
 """
 import hashlib
 import json
 import os
+import subprocess
 import sys
 import time
 import urllib.request
@@ -17,33 +26,115 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from daemon import collect_state  # noqa: E402
+from executor import INBOX, OUTBOX, pid_alive, PIDFILE  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent
+EXECUTOR = ROOT / "executor.py"
+CREATE_NO_WINDOW = 0x08000000
+DETACHED = 0x00000008
 
 HUB = "http://100.102.159.65:8790"
 INTERVAL = 3.0
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
 
+for d in (INBOX, OUTBOX):
+    d.mkdir(parents=True, exist_ok=True)
+
+
+def http(path: str, body=None, timeout=5):
+    req = urllib.request.Request(
+        f"{HUB}{path}",
+        data=json.dumps(body).encode() if body is not None else None,
+        headers={"Content-Type": "application/json",
+                 "X-Office-Token": TOKEN},
+        method="POST" if body is not None else "GET",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.status, json.loads(resp.read() or b"{}")
+
 
 def push(state: dict) -> bool:
-    req = urllib.request.Request(
-        f"{HUB}/api/ingest",
-        data=json.dumps(state).encode(),
-        headers={
-            "Content-Type": "application/json",
-            "X-Office-Token": TOKEN,
-        },
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=4) as resp:
-            return resp.status == 200
+        code, _ = http("/api/ingest", state, timeout=4)
+        return code == 200
     except Exception:
         return False
+
+
+def ensure_executor() -> None:
+    try:
+        if PIDFILE.exists() and pid_alive(int(PIDFILE.read_text().strip())):
+            return
+    except Exception:
+        pass
+    try:
+        subprocess.Popen(
+            [sys.executable, str(EXECUTOR)],
+            creationflags=CREATE_NO_WINDOW | DETACHED,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, cwd=str(ROOT), close_fds=True)
+        print("probe: executor spawned", flush=True)
+    except Exception as exc:
+        print(f"probe: executor spawn failed: {exc}", flush=True)
+
+
+def poll_commands(acked: dict, last_ensure: list) -> None:
+    """claimed cmds → inbox; outbox finals → ack ao hub."""
+    if time.time() - last_ensure[0] > 30:
+        last_ensure[0] = time.time()
+        ensure_executor()
+    try:
+        _, data = http("/api/cmd/pending", timeout=4)
+    except Exception:
+        return
+    for cmd in data.get("pending", []):
+        cid = cmd.get("id")
+        if not cid:
+            continue
+        try:
+            (INBOX / f"{cid}.json").write_text(
+                json.dumps(cmd, ensure_ascii=False), encoding="utf-8")
+            http("/api/cmd/ack", {"id": cid, "status": "dispatched",
+                                  "result": "queued for local executor"})
+            acked[cid] = "dispatched"
+            ensure_executor()
+        except Exception:
+            pass
+    # resultados do executor → acks
+    terminal = ("delivered", "spawned", "interrupted", "interrupt-sent",
+                "queued-manual", "unsupported", "error")
+    for f in OUTBOX.glob("*.json"):
+        cid = f.stem
+        if cid.startswith("_"):
+            continue
+        try:
+            res = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        status = res.get("status", "")
+        if acked.get(cid) == status:
+            continue
+        try:
+            http("/api/cmd/ack", {"id": cid, "status": status,
+                                  "result": res.get("detail", "")})
+            done = True
+        except urllib.error.HTTPError as exc:
+            done = exc.code == 404   # id desconhecido no hub → desiste
+        except Exception:
+            done = False
+        if done:
+            acked[cid] = status
+            if status in terminal:
+                f.unlink(missing_ok=True)
 
 
 def main() -> None:
     last_hash = ""
     failures = 0
+    acked = {}
+    last_ensure = [0.0]
     print(f"devin-office probe -> {HUB} every {INTERVAL}s")
+    ensure_executor()
     while True:
         try:
             state = collect_state()
@@ -57,6 +148,7 @@ def main() -> None:
                     failures += 1
                     if failures in (1, 10, 60):
                         print(f"probe: hub unreachable ({failures} failures)", flush=True)
+            poll_commands(acked, last_ensure)
         except Exception as exc:
             print(f"probe: collect error: {exc}", flush=True)
         time.sleep(INTERVAL)
