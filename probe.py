@@ -12,8 +12,9 @@ O executor (office/executor.py) fala ACP com `devin acp` e é quem executa
 message/spawn/kill a sério. Se não estiver vivo, o probe lança-o detached —
 up.pyw também o supervisiona.
 
-Uso: python office/probe.py [--hub http://100.102.159.65:8790] [--interval 3]
-Env: OFFICE_TOKEN — enviado como X-Office-Token se definido.
+Uso: python office/probe.py [--hub http://<your-vm>:8790] [--interval 3]
+Env: OFFICE_HUB — URL do hub (default http://localhost:8790)
+     OFFICE_TOKEN — enviado como X-Office-Token se definido.
 """
 import hashlib
 import json
@@ -33,7 +34,7 @@ EXECUTOR = ROOT / "executor.py"
 CREATE_NO_WINDOW = 0x08000000
 DETACHED = 0x00000008
 
-HUB = "http://100.102.159.65:8790"
+HUB = os.environ.get("OFFICE_HUB", "http://localhost:8790")
 INTERVAL = 3.0
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
 

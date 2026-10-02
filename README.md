@@ -1,5 +1,10 @@
 # Devin Office
 
+> **EN:** A pixel-art office that renders **real Devin CLI/Desktop activity** —
+> sessions, subagents and MCP calls — as animated characters in your browser.
+> Zero-dependency Python hub + probe; point it at your own `sessions.db` and VM.
+> Docs below are in Portuguese.
+
 Pixel-art office que observa **atividade real** do Devin CLI/Desktop — sessões,
 subagents e chamadas MCP — e renderiza cada agente como um personagem animado
 num escritório em pixel art, diretamente no browser.
@@ -34,7 +39,7 @@ probe.py ── HTTP POST /api/ingest ──► hub.py (VM, PM2: devin-office)
 ## URLs
 
 - `http://localhost:8790` — via túnel SSH (mantido pelo `up.pyw`)
-- `http://100.102.159.65:8790` — direto via Tailscale
+- `http://<your-vm>:8790` — direto via Tailscale/LAN (ex.: `100.x.y.z:8790`)
 
 ## Deploy na VM
 

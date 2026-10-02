@@ -64,7 +64,6 @@ const el=(n,at)=>{const e=document.createElementNS(NS,n);for(const k in at)e.set
 const TOOLS=[
  ["obsidian","Obsidian",e=>e.laptop?.probes?.obsidian_rest_27123===200],
  ["ollama","Ollama VM",e=>e.laptop?.probes?.ollama_fwd_11435===200],
- ["bridge","qwenpaw-bridge",e=>e.laptop?.units?.["qwenpaw-bridge"]==="active"],
  ["tailscale","Tailscale",e=>e.laptop?.units?.tailscaled==="active"],
  ["tunnel","Túnel SSH",e=>e.laptop?.units?.["vm-ollama-tunnel"]==="active"],
  ["mcphub","MCP hub",e=>e.laptop?.units?.["mcp-hub"]==="active"],
