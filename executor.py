@@ -42,13 +42,31 @@ OUTBOX = ROOT / "outbox"
 STATEDIR = ROOT / "state"
 PIDFILE = STATEDIR / "executor.pid"
 SPAWNS = STATEDIR / "spawns.json"
-CREDENTIALS = Path(os.environ.get("APPDATA", "")) / "devin" / "credentials.toml"
-SESSION_LOCKS = Path(os.environ.get("APPDATA", "")) / "devin" / "cli" / "session_locks"
-DEVIN_EXE = os.environ.get(
-    "OFFICE_DEVIN_EXE",
-    r"C:\Users\Utilizador\AppData\Local\Programs\Devin\resources\app"
-    r"\extensions\windsurf\devin\bin\devin.exe",
+_appdata = os.environ.get("APPDATA")
+DATA_DIR = Path(
+    os.environ.get("OFFICE_DATA_DIR")
+    or (Path(_appdata) / "devin" if _appdata
+        else Path.home() / ".local" / "share" / "devin")
 )
+CREDENTIALS = DATA_DIR / "credentials.toml"
+SESSION_LOCKS = DATA_DIR / "cli" / "session_locks"
+
+
+def _default_devin_exe() -> str:
+    import shutil
+    exe = shutil.which("devin")
+    if exe:
+        return exe
+    local = os.environ.get("LOCALAPPDATA")
+    if local:
+        return str(
+            Path(local) / "Programs" / "Devin" / "resources" / "app"
+            / "extensions" / "windsurf" / "devin" / "bin" / "devin.exe"
+        )
+    return "devin"
+
+
+DEVIN_EXE = os.environ.get("OFFICE_DEVIN_EXE", _default_devin_exe())
 SPAWN_CWD = os.environ.get("OFFICE_SPAWN_CWD", str(ROOT.parent))
 SPAWN_MODE = os.environ.get("OFFICE_SPAWN_MODE", "smart")  # modeId p/ spawns
 PROMPT_TIMEOUT_S = float(os.environ.get("OFFICE_PROMPT_TIMEOUT", "900"))

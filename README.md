@@ -12,7 +12,8 @@ num escritório em pixel art, diretamente no browser.
 ## Arquitetura
 
 ```
-sessions.db (Windows local, %APPDATA%\devin\cli)
+sessions.db (máquina local — Windows %APPDATA%\devin\cli ou
+             Linux ~/.local/share/devin/cli)
     │
     ▼
 probe.py ── HTTP POST /api/ingest ──► hub.py (VM, PM2: devin-office)
@@ -40,6 +41,64 @@ probe.py ── HTTP POST /api/ingest ──► hub.py (VM, PM2: devin-office)
 
 - `http://localhost:8790` — via túnel SSH (mantido pelo `up.pyw`)
 - `http://<your-vm>:8790` — direto via Tailscale/LAN (ex.: `100.x.y.z:8790`)
+
+## Monta no teu setup / Run it on your own Devin install
+
+Tudo é **Python stdlib — zero deps, zero build**. Os paths do Devin são
+detectados por SO e todos os endpoints são configuráveis por env var.
+
+### Modo standalone (uma máquina, sem VM — o mais fácil)
+
+```bash
+python3 daemon.py --port 8788     # Linux/macOS
+py daemon.py --port 8788          # Windows
+```
+
+Serve `index.html` + `/api/state` diretamente — abre `http://localhost:8788`
+e o escritório já renderiza as tuas sessões Devin. Não precisa de hub, probe,
+túnel nem PM2.
+
+### Modo split (probe no laptop → hub na VM/servidor)
+
+```bash
+# na VM/servidor:
+python3 hub.py                    # escuta :8790, serve o frontend
+
+# na máquina onde o Devin corre:
+OFFICE_HUB=http://<vm>:8790 OFFICE_TOKEN=<segredo-partilhado> \
+    python3 probe.py --interval 3
+```
+
+### Onde ele procura os dados do Devin
+
+| | Windows | Linux |
+|---|---|---|
+| `sessions.db`, `session_locks/` | `%APPDATA%\devin\cli\` | `~/.local/share/devin/cli/` |
+| `acp-messages/`, `state.vscdb` | `%APPDATA%\Devin\User\` | `~/.config/Devin/User/` |
+| `credentials.toml` (executor) | `%APPDATA%\devin\` | `~/.local/share/devin/` |
+
+### Variáveis de ambiente
+
+| Var | Default | O que faz |
+|---|---|---|
+| `OFFICE_DATA_DIR` | deteção por SO (tabela acima) | override do data dir do Devin |
+| `OFFICE_CONF_DIR` | deteção por SO | override do config dir do Devin |
+| `OFFICE_HUB` | `http://localhost:8790` | URL do hub para o probe |
+| `OFFICE_TOKEN` | — | auth partilhado (`X-Office-Token`); define também no hub |
+| `OFFICE_DEVIN_EXE` | `devin` no PATH | path do executável Devin p/ o executor ACP |
+| `OFFICE_SPAWN_CWD` / `OFFICE_SPAWN_MODE` | repo root / `smart` | cwd e modeId dos spawns via executor |
+| `OFFICE_PROMPT_TIMEOUT` | `900` | timeout (s) dos prompts ACP |
+
+### O que ajustar ao teu gosto
+
+- **Roster de raças**: o mapeamento perfil→raça vive em `daemon.py`
+  (keywords) e nos sprites `assets/chars/ai_<raca>.png` (7×3 frames, 48×48).
+- **`jev_log.db` / `heartbeat/state.json`**: opcionais — são lidos de
+  `../` se existirem (sinais ambient do meu ecossistema); sem eles o
+  escritório funciona na mesma, só sem os personagens "ambient".
+- **Executor** (`executor.py`): controlo real — spawn/message/kill de
+  sessões ACP. Precisa do `devin` CLI autenticado. Se não quiseres
+  controlo (só observação), não o lances: probe+daemon bastam.
 
 ## Deploy na VM
 

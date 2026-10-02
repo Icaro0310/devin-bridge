@@ -18,11 +18,27 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-APPDATA = Path(os.environ.get("APPDATA", ""))
-SESSIONS_DB = APPDATA / "devin" / "cli" / "sessions.db"
-SESSION_LOCKS = APPDATA / "devin" / "cli" / "session_locks"
-ACP_MSG_DIR = APPDATA / "devin" / "User" / "acp-messages"
-VSCDB = APPDATA / "devin" / "User" / "globalStorage" / "state.vscdb"
+
+# Devin stores: Windows → %APPDATA%\devin (data) + %APPDATA%\Devin (config);
+# Linux → ~/.local/share/devin + ~/.config/Devin. Override com env vars.
+def _devin_dirs() -> tuple[Path, Path]:
+    data = os.environ.get("OFFICE_DATA_DIR")
+    conf = os.environ.get("OFFICE_CONF_DIR")
+    appdata = os.environ.get("APPDATA")
+    if appdata:
+        d_default = Path(appdata) / "devin"
+        c_default = Path(appdata) / "Devin"
+    else:
+        d_default = Path.home() / ".local" / "share" / "devin"
+        c_default = Path.home() / ".config" / "Devin"
+    return Path(data) if data else d_default, Path(conf) if conf else c_default
+
+
+DATA_DIR, CONF_DIR = _devin_dirs()
+SESSIONS_DB = DATA_DIR / "cli" / "sessions.db"
+SESSION_LOCKS = DATA_DIR / "cli" / "session_locks"
+ACP_MSG_DIR = CONF_DIR / "User" / "acp-messages"
+VSCDB = CONF_DIR / "User" / "globalStorage" / "state.vscdb"
 JEV_DB = ROOT.parent / "jev_log.db"
 ACTIVE_WINDOW_S = 15 * 60  # sessão "viva" se teve atividade nos últimos 15 min
 SUBAGENT_TTL_S = 30 * 60
