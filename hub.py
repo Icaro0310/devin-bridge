@@ -25,6 +25,30 @@ CMD_KEEP_S = 3600          # purga comandos terminados após 1h
 MAX_TEXT = 4000
 ACTIONS = {"message", "spawn", "kill"}
 
+ECO_URL = "http://127.0.0.1:8900/api/status"
+_eco_cache = {"at": 0.0, "data": None}
+
+
+def eco_status() -> dict:
+    """Proxy server-side do /api/status do devin-dashboard (mesma VM).
+
+    Cache 5s — a página pode fazer polling à vontade sem martelar o backend.
+    Devolve também o estado office (probe legacy) fundido.
+    """
+    now = time.time()
+    if _eco_cache["data"] is not None and now - _eco_cache["at"] < 5:
+        eco = _eco_cache["data"]
+    else:
+        try:
+            import urllib.request
+            with urllib.request.urlopen(ECO_URL, timeout=4) as r:
+                eco = json.loads(r.read().decode())
+            _eco_cache.update(at=now, data=eco)
+        except Exception:
+            eco = _eco_cache["data"] or {"error": "dashboard api inalcançável"}
+    return {"eco": eco, "office": current_state()}
+
+
 STATE_LOCK = threading.Lock()
 CMD_LOCK = threading.Lock()
 STATE_CACHE = {
@@ -154,7 +178,9 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def do_GET(self):
-        if self.path.startswith("/api/state"):
+        if self.path.startswith("/api/eco"):
+            self._send(200, json.dumps(eco_status()).encode())
+        elif self.path.startswith("/api/state"):
             self._send(200, json.dumps(current_state()).encode())
         elif self.path.startswith("/api/cmd/pending"):
             self._send(200, json.dumps({"pending": cmd_pending()}).encode())

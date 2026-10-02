@@ -1,835 +1,238 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Devin Office</title>
+<title>Devin Hub — ecossistema vivo</title>
 <style>
-  :root {
-    --bg: #14161f;
-    --panel: #1c1f2e;
-    --panel2: #232739;
-    --line: #333a55;
-    --txt: #e8eaf2;
-    --dim: #8b91ad;
-    --green: #5dd68c;
-    --amber: #e8b44a;
-    --red: #e86a6a;
-    --blue: #6ea8e8;
+  :root{
+    --bg:#0b0e14; --chip:#161b26; --chip-line:#3a4157; --trace:#2a3145;
+    --green:#57d98d; --red:#e86a6a; --txt:#e8eaf2; --dim:#7d86a0; --amber:#e8b44a;
   }
-  * { box-sizing: border-box; margin: 0; }
-  html, body { height: 100%; }
-  body {
-    background: var(--bg);
-    color: var(--txt);
-    font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
-    overflow: hidden;
-  }
-  .px { image-rendering: pixelated; image-rendering: crisp-edges; }
-
-  /* ── layout ─────────────────────────────── */
-  #app { display: flex; height: 100vh; }
-  #stage-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 14px; min-width: 0; }
-  #stage {
-    position: relative;
-    width: 1180px; height: 720px;
-    max-width: 100%; max-height: 100%;
-    aspect-ratio: 1180 / 720;
-    transform-origin: center;
-    overflow: hidden;
-    border: 2px solid var(--line);
-    border-radius: 4px;
-    background: #20263a;
-    box-shadow: 0 18px 60px rgba(0,0,0,.5);
-  }
-
-  /* ── office scene ───────────────────────── */
-  .wall {
-    position: absolute; left: 0; right: 0; top: 46px; height: 72px;
-    background:
-      linear-gradient(#2b3350, #242b44);
-    border-bottom: 6px solid #1a1f33;
-  }
-  .wall .wallitem { top: -16px; }
-  .wall::after {
-    content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 6px;
-    background: #161a2b;
-  }
-  .floor {
-    position: absolute; left: 0; right: 0; top: 118px; bottom: 0;
-    background-image: url("assets/furniture/floor_7.png");
-    background-size: 48px 48px;
-    image-rendering: pixelated;
-    filter: brightness(.62) saturate(.9);
-  }
-  .wallitem { position: absolute; top: 18px; }
-
-  /* desk station */
-  .station { position: absolute; width: 168px; height: 128px; }
-  .station .desk { position: absolute; left: 12px; top: 0; width: 144px; height: 96px; }
-  .station .pc { position: absolute; left: 58px; top: 4px; width: 48px; height: 96px; }
-  .station .chair { position: absolute; left: 60px; top: 92px; width: 48px; height: 48px; }
-
-  /* character — AI RPG Maker sheets: 336x144 = 3 rows x 7 frames de 48x48, @2x */
-  .npc { position: absolute; width: 96px; height: 96px; transition: left 1.4s linear, top 1.4s linear, opacity .5s; z-index: 5; }
-  .npc .spr {
-    width: 96px; height: 96px;
-    background-size: 672px 288px;
-    background-repeat: no-repeat;
-    image-rendering: pixelated;
-  }
-  .npc.flip .spr { transform: scaleX(-1); }
-  .npc .tag {
-    position: absolute; left: 50%; top: -20px; transform: translateX(-50%);
-    white-space: nowrap;
-    background: rgba(15,17,28,.92); border: 1px solid var(--line);
-    color: var(--txt); font: 600 10px/1.6 "Consolas", monospace;
-    padding: 1px 7px; border-radius: 3px; letter-spacing: .04em;
-    display: flex; gap: 6px; align-items: center;
-  }
-  .npc .tag .dot { width: 6px; height: 6px; border-radius: 1px; display: inline-block; }
-  .npc .tool {
-    position: absolute; left: 50%; top: 96px; transform: translateX(-50%);
-    white-space: nowrap; color: var(--dim);
-    font: 10px/1.4 "Consolas", monospace; text-align: center;
-    max-width: 150px; overflow: hidden; text-overflow: ellipsis;
-    text-shadow: 0 1px 2px #000;
-  }
-  .npc.leaving { z-index: 8; }
-  .npc.departed { opacity: 0; }
-  .dot.working { background: var(--green); }
-  .dot.running { background: var(--green); }
-  .dot.idle    { background: var(--amber); }
-  .dot.failed  { background: var(--red); }
-  .dot.waiting { background: var(--blue); }
-
-  /* waiting indicator — só o balão anima (steps = pixel feel) */
-  .npc .alert {
-    display: none;
-    position: absolute; left: 50%; top: -46px; transform: translateX(-50%);
-    width: 20px; height: 20px; text-align: center;
-    background: var(--amber); color: #14161f;
-    border: 2px solid #0d0f18; border-radius: 3px;
-    font: 700 13px/18px "Consolas", monospace;
-    box-shadow: 0 2px 0 rgba(0,0,0,.45);
-    animation: alertbob 1.4s steps(2, jump-none) infinite;
-    z-index: 6; pointer-events: none;
-  }
-  .npc.waiting .alert { display: block; }
-  @keyframes alertbob {
-    0%, 100% { margin-top: 0; }
-    50%      { margin-top: -5px; }
-  }
-
-  /* service counter (top wall, right side) */
-  #svcbar { position: absolute; top: 6px; right: 14px; display: flex; gap: 10px; align-items: flex-start; z-index: 4; }
-  .svc { position: relative; width: 56px; text-align: center; cursor: pointer; }
-  .svc img { width: 48px; height: 96px; }
-  .svc .nm {
-    margin-top: 2px; font: 9px/1.3 "Consolas", monospace; color: var(--dim);
-    background: rgba(15,17,28,.9); border: 1px solid var(--line); border-radius: 3px;
-    padding: 0 4px; display: inline-block;
-  }
-  .svc.active .nm { color: var(--green); border-color: var(--green); }
-
-  /* compact scene (narrow preview panes) */
-  #stage.compact .wideonly { display: none; }
-  #stage.compact .svc { width: 44px; }
-  #stage.compact .svc img { width: 36px; height: 72px; }
-  #stage.compact .svc .nm { font-size: 8px; padding: 0 2px; }
-
-  .door {
-    position: absolute; left: 34px; bottom: 0; width: 96px; height: 26px;
-    background: #14161f; border-top: 3px solid #3a4a70;
-    color: var(--dim); font: 9px/26px "Consolas", monospace; text-align: center;
-    letter-spacing: .18em; z-index: 3;
-  }
-
-  /* ticker */
-  #ticker {
-    position: absolute; left: 160px; bottom: 10px; width: 330px; max-height: 132px;
-    background: rgba(15,17,28,.9); border: 1px solid var(--line); border-radius: 4px;
-    padding: 7px 10px; overflow: hidden; z-index: 6;
-    font: 10.5px/1.6 "Consolas", monospace;
-  }
-  #ticker h4 { color: var(--amber); font-size: 9px; letter-spacing: .14em; margin-bottom: 3px; }
-  #ticker div { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #ticker div.failed { color: var(--red); }
-
-  /* ── header ─────────────────────────────── */
-  header {
-    position: absolute; top: 0; left: 0; right: 0; height: 46px; z-index: 9;
-    display: flex; align-items: center; gap: 12px; padding: 0 14px;
-    background: rgba(15,17,28,.97); border-bottom: 1px solid var(--line);
-  }
-  header h1 { font: 700 13px/1 "Consolas", monospace; letter-spacing: .12em; }
-  header h1 b { color: var(--red); }
-  #live { font: 10px "Consolas", monospace; color: var(--green); display: flex; align-items: center; gap: 5px; }
-  #live::before { content: ""; width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
-  #live.off { color: var(--red); } #live.off::before { background: var(--red); }
-  header .stats { margin-left: auto; display: flex; gap: 14px; font: 10.5px "Consolas", monospace; color: var(--dim); }
-  header .stats b { color: var(--txt); }
-
-  /* ── right panel: pushes the scene, toggleable ── */
-  #app { overflow: hidden; }
-  #panel {
-    width: 296px; flex: none;
-    background: var(--panel); border-left: 1px solid var(--line);
-    overflow-y: auto; padding: 12px;
-    display: flex; flex-direction: column; gap: 12px;
-    margin-right: -297px; transition: margin-right .22s ease;
-  }
-  body.panel-open #panel { margin-right: 0; }
-  #panel-toggle {
-    position: fixed; right: 0; top: 50%; transform: translateY(-50%);
-    z-index: 51; width: 24px; height: 78px; padding: 0;
-    background: var(--panel2); border: 1px solid var(--line); border-right: none;
-    border-radius: 5px 0 0 5px; color: var(--dim); cursor: pointer;
-    font: 13px "Consolas", monospace; transition: right .22s ease;
-  }
-  #panel-toggle:hover { color: var(--txt); }
-  body.panel-open #panel-toggle { right: 296px; }
-  .card { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 10px 12px; }
-  .card h3 { font: 700 10px "Consolas", monospace; letter-spacing: .14em; color: var(--dim); margin-bottom: 8px; display: flex; justify-content: space-between; }
-  .ent {
-    display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 4px;
-    cursor: pointer; font: 11px "Consolas", monospace;
-  }
-  .ent:hover, .ent.sel { background: #2b3050; }
-  .ent .dot { width: 7px; height: 7px; border-radius: 1px; flex: none; }
-  .ent .nm { flex: 1; }
-  .ent .st { color: var(--dim); font-size: 10px; }
-  .kv { display: grid; grid-template-columns: 92px 1fr; gap: 3px 8px; font: 11px/1.5 "Consolas", monospace; }
-  .kv dt { color: var(--dim); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; padding-top: 1px; }
-  .kv dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
-  .chip {
-    font: 10px "Consolas", monospace; padding: 3px 8px; border-radius: 3px;
-    background: #262b42; border: 1px solid var(--line); color: var(--dim); cursor: pointer;
-  }
-  .chip.active { color: var(--green); border-color: var(--green); }
-  /* ── control UI (inspector + spawn card) ── */
-  .ctl { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
-  .ctl-row { display: flex; gap: 6px; }
-  .ctl input[type=text] {
-    flex: 1; min-width: 0; background: #14161f; color: var(--txt);
-    border: 1px solid var(--line); border-radius: 3px; padding: 5px 7px;
-    font: 11px "Consolas", monospace; outline: none;
-  }
-  .ctl input[type=text]:focus { border-color: var(--blue); }
-  .ctl button, .btn {
-    background: #262b42; color: var(--txt); border: 1px solid var(--line);
-    border-radius: 3px; padding: 5px 10px; cursor: pointer;
-    font: 700 10px "Consolas", monospace; letter-spacing: .08em;
-  }
-  .ctl button:hover, .btn:hover { border-color: var(--green); color: var(--green); }
-  .btn.danger:hover { border-color: var(--red); color: var(--red); }
-  .cmd-status {
-    margin-top: 6px; font: 10px/1.5 "Consolas", monospace; color: var(--dim);
-    min-height: 14px; word-break: break-word;
-  }
-  .cmd-status.ok { color: var(--green); }
-  .cmd-status.err { color: var(--red); }
-  .files-list { font: 10px/1.6 "Consolas", monospace; color: var(--dim); }
-  .files-list div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: rtl; text-align: left; }
-  .station { cursor: default; }
-  .station.spawnable { cursor: pointer; }
-  .station.spawnable::after {
-    content: "+"; position: absolute; left: 60px; top: 100px; width: 48px;
-    text-align: center; color: var(--green); font: 700 14px/1 "Consolas", monospace;
-    opacity: 0; transition: opacity .15s;
-  }
-  .station.spawnable:hover::after { opacity: .9; }
-
-  .attrib { font: 9.5px/1.5 "Consolas", monospace; color: #5a6080; margin-top: auto; }
-  .attrib a { color: #7c86b8; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .npc { transition: none; }
-  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif;overflow:hidden;height:100vh}
+  header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;
+    align-items:center;padding:12px 20px;pointer-events:none}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.4px}
+  header .sub{color:var(--dim);font-size:11px}
+  #stat{font-size:11px;color:var(--dim);text-align:right}
+  #stat b{color:var(--green);font-weight:600}
+  #stat b.bad{color:var(--red)}
+  svg{position:fixed;inset:0;width:100vw;height:100vh}
+  .arm{stroke:var(--trace);stroke-width:2;fill:none;transition:stroke .4s, opacity .4s}
+  .arm.on{stroke:#2f4a3a}
+  .arm.down{stroke:#4a2f33;stroke-dasharray:5 5}
+  .pad{fill:#1c2130;stroke:var(--chip-line);stroke-width:1.5}
+  .pad.on{stroke:var(--green);fill:#12281c}
+  .pad.down{stroke:var(--red);animation:blink 1.4s infinite}
+  .pulse{fill:var(--green);filter:drop-shadow(0 0 6px var(--green))}
+  .pulse.down{fill:var(--red);filter:drop-shadow(0 0 5px var(--red))}
+  .lbl{font-size:10.5px;fill:var(--dim);letter-spacing:.3px}
+  .lbl.on{fill:#bfe8cf}
+  .lbl.down{fill:#d99}
+  .agent .arm{stroke:#3a4a63}
+  .agent .pad{stroke:#6ea8e8}
+  .agent .pulse{fill:#6ea8e8;filter:drop-shadow(0 0 6px #6ea8e8)}
+  .agent .lbl{fill:#9ab8e8}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  #chip-body{fill:var(--chip);stroke:var(--chip-line);stroke-width:2;
+    filter:drop-shadow(0 0 18px rgba(87,217,141,.18))}
+  #chip-txt{font-size:26px;font-weight:800;fill:var(--txt);letter-spacing:3px}
+  .pin{stroke:var(--chip-line);stroke-width:2}
+  #legend{position:fixed;bottom:12px;left:20px;font-size:10.5px;color:var(--dim);z-index:5}
+  .lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 0 14px;vertical-align:middle}
+  .lg.g{background:var(--green)} .lg.b{background:#6ea8e8} .lg.r{background:var(--red)}
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="stage-wrap">
-    <div id="stage">
-      <div class="wall">
-        <img class="wallitem px" src="assets/furniture/whiteboard.png" style="left:150px;width:96px;height:96px" alt="">
-        <img class="wallitem px" src="assets/furniture/clock.png"      style="left:300px;width:48px;height:96px" alt="">
-        <img class="wallitem px wideonly" src="assets/furniture/painting.png"   style="left:392px;width:96px;height:96px" alt="">
-        <img class="wallitem px" src="assets/furniture/bookshelf.png"  style="left:540px;width:96px;height:96px" alt="">
-        <img class="wallitem px wideonly" src="assets/furniture/bookshelf.png"  style="left:640px;width:96px;height:96px" alt="">
-        <img class="wallitem px wideonly" src="assets/furniture/coffee.png"     style="left:770px;top:34px;width:48px;height:48px" alt="">
-      </div>
-      <div class="floor"></div>
-      <div id="svcbar"></div>
-      <div id="stations"></div>
-      <div id="npcs"></div>
-      <div class="door">ENTRANCE</div>
-      <div id="ticker"><h4>RECENT ACTIVITY</h4><div id="ticker-items"></div></div>
-      <header>
-        <h1><b>D</b> DEVIN OFFICE</h1>
-        <span id="live">LIVE</span>
-        <div class="stats">
-          <span><b id="s-agents">0</b> agents</span>
-          <span><b id="s-subs">0</b> workers</span>
-          <span><b id="s-svc">0</b> services</span>
-          <span id="s-upd"></span>
-        </div>
-      </header>
-    </div>
-  </div>
-
-  <aside id="panel">
-    <div class="card"><h3>ON THE FLOOR <span id="n-ent"></span></h3><div id="ents"></div></div>
-    <div class="card" id="inspector"><h3>INSPECTOR</h3><div id="insp-body"><span style="color:var(--dim)">Select an entity.</span></div></div>
-    <div class="card"><h3>SPAWN</h3>
-      <div class="ctl" style="border-top:none;padding-top:0;margin-top:0">
-        <div class="ctl-row">
-          <input type="text" id="spawn-text" placeholder="task for a new worker…" maxlength="2000">
-          <button id="spawn-btn">SPAWN</button>
-        </div>
-        <div class="cmd-status" id="spawn-status"></div>
-      </div>
-    </div>
-    <div class="card"><h3>MCP &amp; AMBIENT</h3><div class="chips" id="svcchips"></div></div>
-    <div class="attrib">
-      Office assets: pixel-agents (MIT) via harishkotra/agent-office. Personal project — no distribution.
-    </div>
-  </aside>
-  <button id="panel-toggle" aria-label="Toggle inspector panel" aria-expanded="false">◀</button>
+<header>
+  <div><h1>DEVIN HUB</h1><div class="sub">circuito vivo do ecossistema</div></div>
+  <div id="stat">a ligar…</div>
+</header>
+<svg id="board"></svg>
+<div id="legend">
+  <span class="lg g"></span>ferramenta ativa
+  <span class="lg r"></span>caída
+  <span class="lg b"></span>subagente (braço dinâmico)
 </div>
-
 <script>
-"use strict";
-/* Devin Office — corporate edition.
-   Char sheets: 112x96 = 3 rows (down,up,right) x 7 frames of 16x32.
-   walk = frames 0-3, typing = 4-5, reading = 6. */
+const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
+const $=id=>document.getElementById(id);
+const el=(n,at)=>{const e=document.createElementNS(NS,n);for(const k in at)e.setAttribute(k,at[k]);return e;};
 
-const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>"']/g, c =>
-  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-
-/* raças fantasia — sprites gerados por make_races.py (base pixel-agents MIT) */
-const RACES = [
-  { f: "ai_mago",       label: "Mago" },              // Devin boss
-  { f: "ai_druida",     label: "Orc Druida" },
-  { f: "ai_arqueiro",   label: "Elfo Arqueiro" },
-  { f: "ai_paladino",   label: "Anjo Paladino" },
-  { f: "ai_feiticeiro", label: "Duende Feiticeiro" },
-  { f: "ai_guerreiro",  label: "Anão Guerreiro" },
-  { f: "ai_bruxo",      label: "Demônio Bruxo" },
-  { f: "ai_artificie",  label: "Vampiro Artíficie" },
-  { f: "ai_xama",       label: "Lobisomem Xamã" },
+// ---------- ferramentas fixas (check → estado no payload /api/eco) ----------
+const TOOLS=[
+ ["obsidian","Obsidian",e=>e.laptop?.probes?.obsidian_rest_27123===200],
+ ["ollama","Ollama VM",e=>e.laptop?.probes?.ollama_fwd_11435===200],
+ ["bridge","qwenpaw-bridge",e=>e.laptop?.units?.["qwenpaw-bridge"]==="active"],
+ ["tailscale","Tailscale",e=>e.laptop?.units?.tailscaled==="active"],
+ ["tunnel","Túnel SSH",e=>e.laptop?.units?.["vm-ollama-tunnel"]==="active"],
+ ["mcphub","MCP hub",e=>e.laptop?.units?.["mcp-hub"]==="active"],
+ ["slack","Slack poll",e=>e.laptop?.units?.["slack-poll"]==="active"||pm2up(e,"slack-poll")],
+ ["browser","Browser MCP",e=>[200,406].includes(e.laptop?.probes?.browser_mcp_fwd_8765)],
+ ["djaevin","Djævin",e=>!!e.laptop?.tools?.djaevin],
+ ["heartbeat","Heartbeat",e=>!!e.laptop?.tools?.heartbeat],
+ ["janitor","Janitor",e=>!!e.laptop?.tools?.["session-janitor"]],
+ ["compressor","Compressor",e=>!!e.laptop?.tools?.["vault-compressor"]],
+ ["dashboard","Dashboard",e=>pm2up(e,"devin-dashboard")],
+ ["office","Office",e=>pm2up(e,"devin-office")],
 ];
-const raceSprite = i => `assets/chars/${RACES[i % RACES.length].f}.png`;
+function pm2up(e,n){return (e.vm?.pm2||[]).some(p=>p.name===n&&p.status==="online")}
 
-/* profile→raça: a classe reflete o tipo de trabalho real do agente */
-const PROFILE_RACE = [
-  [/explor|scout|research|search|lookup|find/,        2], // Elfo Arqueiro — scout
-  [/review|audit|secur|evaluat|judge|janitor|guard/,  3], // Anjo Paladino — julgamento/proteção
-  [/build|resolv|fix|test|coverage|compile/,          5], // Anão Guerreiro — forja/builds
-  [/plan|architect|prd|spec|design|pattern/,          4], // Duende Feiticeiro — planeia feitiços
-  [/doc|writ|codemap|comment|market|copy|readme/,     7], // Vampiro Artíficie — escriba/artefatos
-  [/perf|optim|mle|data|metric|loop|gan|eval/,        8], // Lobisomem Xamã — rituais de dados
-  [/troubleshoot|hunt|debug|network|homelab/,         6], // Demônio Bruxo — bugs ocultos
-];
-const hashStr = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
-function raceIdxForProfile(profile, fallbackKey) {
-  const p = (profile || "").toLowerCase();
-  for (const [re, i] of PROFILE_RACE) if (re.test(p)) return i;
-  return hashStr(fallbackKey || p) % RACES.length;
-}
-const ROW = { down: 0, up: 1, right: 2 };
-const FRAME_PX = 96;             // 48px * 2
-const FRAME_PY = 96;             // 48px * 2
+// ---------- geometria ----------
+let W,H,CX,CY,R,AR;
+function resize(){W=innerWidth;H=innerHeight;CX=W/2;CY=H/2+14;R=Math.min(W,H)*0.36;AR=Math.min(W,H)*0.24;layout();}
+addEventListener("resize",resize);
 
-/* desk slots: two scene layouts; entities re-seat when layout flips */
-const LAYOUTS = {
-  wide: { w: 1180, h: 720,
-    agents:  [{x:60,y:180},{x:300,y:180},{x:540,y:180},
-              {x:60,y:360},{x:300,y:360},{x:540,y:360}],
-    workers: [{x:800,y:180},{x:1000,y:180},
-              {x:800,y:360},{x:1000,y:360},
-              {x:800,y:540},{x:1000,y:540}] },
-  compact: { w: 830, h: 760,
-    agents:  [{x:60,y:150},{x:280,y:150},
-              {x:60,y:330},{x:280,y:330},
-              {x:60,y:510},{x:280,y:510}],
-    workers: [{x:520,y:150},{x:670,y:150},
-              {x:520,y:330},{x:670,y:330},
-              {x:520,y:510},{x:670,y:510}] },
-};
-const agentDesks  = Array.from({ length: 6 }, () => ({ x: 0, y: 0 }));
-const workerDesks = Array.from({ length: 6 }, () => ({ x: 0, y: 0 }));
-let layout = null;
-const DOOR = {x: 60, y: 620};
-const SEAT_DX = 36, SEAT_DY = 74;   // char pos inside station (96px wide, centered on chair)
-
-const entities = new Map();   // entityId -> record
-const departed = new Set();   // entityIds that already walked out — never re-add
-let selId = null;
-
-function setFrame(el, row, frame, flip = false) {
-  const spr = el.querySelector(".spr");
-  spr.style.backgroundPosition = `-${frame * FRAME_PX}px -${row * FRAME_PY}px`;
-  el.classList.toggle("flip", flip);
+// braço estilo PCB: sai do chip, cotovelo a meio caminho, pad + label no fim
+function tracePath(x1,y1,x2,y2,a){
+  const mx=Math.cos(a),my=Math.sin(a);
+  const ex=x1+mx*(R*0.55), ey=y1+my*(R*0.55);           // ponto do cotovelo
+  const kx=(Math.abs(mx)>Math.abs(my))?ex:x2, ky=(Math.abs(mx)>Math.abs(my))?y2:ey;
+  return `M ${x1} ${y1} L ${kx} ${ky} L ${x2} ${y2}`;
 }
 
-/* ── entity lifecycle ─────────────────────────────────────── */
-function spawn(id, meta) {
-  const el = document.createElement("div");
-  el.className = "npc px";
-  el.style.left = DOOR.x + "px";
-  el.style.top = DOOR.y + "px";
-  el.innerHTML =
-    `<div class="spr" style="background-image:url('${meta.sprite}')"></div>` +
-    `<div class="alert">!</div>` +
-    `<div class="tag"><span class="dot ${meta.state}"></span>${esc(meta.name)}</div>` +
-    `<div class="tool"></div>`;
-  el.addEventListener("click", () => select(id));
-  $("#npcs").appendChild(el);
-  const rec = { id, el, meta, phase: "entering", frame: 0, tick: 0 };
-  entities.set(id, rec);
-  // walk in
-  setFrame(el, ROW.down, 0);
-  requestAnimationFrame(() => moveTo(rec, meta.desk.x + SEAT_DX, meta.desk.y + SEAT_DY));
-  return rec;
-}
+// ---------- nós ----------
+const arms=new Map();   // key → {path,pad,pulse,lbl,len,up,agent,...}
+const agentNum=new Map(); // label → número estável (SA-1, SA-2…)
+const usedSlots=new Set();
+function freeSlot(){for(let s=0;s<8;s++)if(!usedSlots.has(s)){usedSlots.add(s);return s}return Math.floor(Math.random()*8)}
+function numFor(l){if(!agentNum.has(l))agentNum.set(l,agentNum.size+1);return agentNum.get(l)}
 
-function moveTo(rec, x, y) {
-  const dx = x - parseFloat(rec.el.style.left);
-  const dy = y - parseFloat(rec.el.style.top);
-  rec.moving = true;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    rec.dir = dx > 0 ? ROW.right : ROW.right;
-    rec.flip = dx < 0;
-  } else {
-    rec.dir = dy < 0 ? ROW.up : ROW.down;
-    rec.flip = false;
+function chipDraw(){
+  svg.innerHTML="";
+  const g=el("g",{id:"chip"});
+  // pinos decorativos no chip
+  for(let i=-2;i<=2;i++){
+    g.appendChild(el("line",{class:"pin",x1:CX+i*26,y1:CY-58,x2:CX+i*26,y2:CY-46}));
+    g.appendChild(el("line",{class:"pin",x1:CX+i*26,y1:CY+46,x2:CX+i*26,y2:CY+58}));
+    g.appendChild(el("line",{class:"pin",x1:CX-88,y1:CY+i*16,x2:CX-76,y2:CY+i*16}));
+    g.appendChild(el("line",{class:"pin",x1:CX+76,y1:CY+i*16,x2:CX+76,y2:CY+i*16}));
   }
-  rec.el.style.left = x + "px";
-  rec.el.style.top = y + "px";
-  rec.dest = { x, y };
+  g.appendChild(el("rect",{id:"chip-body",x:CX-78,y:CY-48,width:156,height:96,rx:14}));
+  const t=el("text",{id:"chip-txt",x:CX,y:CY+9,"text-anchor":"middle"});t.textContent="DEVIN";
+  g.appendChild(t);svg.appendChild(g);
 }
 
-function depart(rec) {           // completed → walk to door, fade, remove
-  rec.phase = "leaving";
-  rec.el.classList.add("leaving");
-  rec.el.querySelector(".tag").style.opacity = .55;
-  moveTo(rec, DOOR.x, DOOR.y);
-  setTimeout(() => {
-    rec.el.classList.add("departed");
-    setTimeout(() => { rec.el.remove(); entities.delete(rec.id); }, 600);
-  }, 1500);
-}
-
-function animTick() {            // 1 tick ≈ 160ms — continuous, no pauses
-  for (const rec of entities.values()) {
-    rec.tick++;
-    if (rec.phase === "leaving" || rec.moving) {
-      setFrame(rec.el, rec.dir ?? ROW.down, rec.tick % 4, rec.flip);
-      if (rec.dest && Math.abs(parseFloat(rec.el.style.left) - rec.dest.x) < 2 &&
-          Math.abs(parseFloat(rec.el.style.top) - rec.dest.y) < 2) rec.moving = false;
-      continue;
+function layout(){
+  chipDraw();
+  const n=TOOLS.length;
+  TOOLS.forEach(([id,label],i)=>{
+    const a=-Math.PI/2 + i*(2*Math.PI/n);            // distribui à volta do chip
+    const x0=CX+Math.cos(a)*86, y0=CY+Math.sin(a)*56; // saída na borda do chip
+    const x2=CX+Math.cos(a)*(R), y2=CY+Math.sin(a)*(R);
+    let node=arms.get(id);
+    if(!node){
+      const g=el("g",{id:"arm-"+id});
+      const path=el("path",{class:"arm"});
+      const pad=el("circle",{class:"pad",r:11});
+      const pulse=el("circle",{class:"pulse",r:4});
+      const lbl=el("text",{class:"lbl"});
+      g.append(path,pad,pulse,lbl);svg.appendChild(g);
+      node={id,label,path,pad,pulse,lbl,g,phase:i*0.7,up:false,agent:false,a,x0,y0,x2,y2,len:0};
+      arms.set(id,node);
     }
-    if (rec.meta.state === "working" || rec.meta.state === "running") {
-      setFrame(rec.el, ROW.down, 4 + ((rec.tick >> 1) % 2));   // typing, mais lento
-    } else {
-      setFrame(rec.el, ROW.down, 0);
-    }
-  }
-}
-setInterval(animTick, 160);
-
-/* transitionend: when a glide finishes, mark idle (walk anim stops) */
-$("#npcs").addEventListener("transitionend", e => {
-  const el = e.target.closest ? e.target.closest(".npc") : null;
-  if (!el) return;
-  for (const rec of entities.values()) if (rec.el === el) rec.moving = false;
-});
-
-/* ── naming & desks ───────────────────────────────────────── */
-const devinNo = new Map();      // sessionId -> 1,2,3…
-const workerNo = new Map();     // "sid:subIdx" -> "p.s"
-const deskOf = new Map();       // entityId -> desk object
-function nextFree(desks) {
-  const used = new Set([...deskOf.values()]);
-  return desks.find(d => !used.has(d));
+    node.a=a;node.x0=x0;node.y0=y0;node.x2=x2;node.y2=y2;
+    node.path.setAttribute("d",tracePath(x0,y0,x2,y2,a));
+    node.len=node.path.getTotalLength();
+    node.pad.setAttribute("cx",x2);node.pad.setAttribute("cy",y2);
+    const side=Math.cos(a)>=0?1:-1;
+    node.lbl.setAttribute("x",x2+side*16);node.lbl.setAttribute("y",y2+4);
+    node.lbl.setAttribute("text-anchor",side>0?"start":"end");
+    node.lbl.textContent=label;
+  });
 }
 
-function applyLayout(mode) {
-  if (mode === layout) return;
-  layout = mode;
-  const L = LAYOUTS[mode];
-  const st = $("#stage");
-  st.style.width = L.w + "px";
-  st.style.height = L.h + "px";
-  st.classList.toggle("compact", mode === "compact");
-  L.agents.forEach((p, i) => { agentDesks[i].x = p.x; agentDesks[i].y = p.y; });
-  L.workers.forEach((p, i) => { workerDesks[i].x = p.x; workerDesks[i].y = p.y; });
-  for (const d of [...agentDesks, ...workerDesks]) {
-    if (d.el) { d.el.style.left = d.x + "px"; d.el.style.top = d.y + "px"; }
+// ---------- braços dinâmicos (subagentes) ----------
+function agentKey(l){return "ag-"+l.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
+function syncAgents(list){
+  const want=new Map(list.map(l=>[agentKey(l),{label:l,n:numFor(l)}]));
+  // nascer: braço cresce a partir do chip
+  for(const [k,info] of want){
+    if(arms.has(k))continue;
+    const slot=freeSlot();
+    const a=-Math.PI/2+slot*(Math.PI/4);              // slots na metade superior
+    const x2=CX+Math.cos(a)*AR, y2=CY+Math.sin(a)*AR;
+    const g=el("g",{class:"agent"});
+    const path=el("path",{class:"arm on"});
+    const pad=el("circle",{class:"pad",r:9,cx:x2,cy:y2});
+    const pulse=el("circle",{class:"pulse",r:4});
+    const lbl=el("text",{class:"lbl"});
+    g.append(path,pad,pulse,lbl);svg.appendChild(g);
+    const node={id:k,label:"SA-"+info.n,path,pad,pulse,lbl,g,phase:Math.random()*3,
+      up:true,agent:true,a,slot,x0:CX,y0:CY,x2,y2,len:0,born:performance.now()};
+    node.path.setAttribute("d",tracePath(CX,CY,x2,y2,a));
+    node.len=node.path.getTotalLength();
+    // nasce "a sair" do chip
+    node.path.style.strokeDasharray=node.len;
+    node.path.style.strokeDashoffset=node.len;
+    requestAnimationFrame(()=>{node.path.style.transition="stroke-dashoffset .8s ease";node.path.style.strokeDashoffset=0;});
+    const side=Math.cos(a)>=0?1:-1;
+    lbl.setAttribute("x",x2+side*13);lbl.setAttribute("y",y2+4);
+    lbl.setAttribute("text-anchor",side>0?"start":"end");
+    lbl.textContent=`SA-${info.n} · ${info.label}`;
+    arms.set(k,node);
   }
-  for (const rec of entities.values()) {
-    const d = rec.meta.desk;
-    if (d && rec.phase !== "leaving") moveTo(rec, d.x + SEAT_DX, d.y + SEAT_DY);
-  }
-}
-function devinIndex(sid) {
-  if (!devinNo.has(sid)) devinNo.set(sid, devinNo.size + 1);
-  return devinNo.get(sid);
-}
-
-/* ── reconcile state ──────────────────────────────────────── */
-function renderStations() {
-  const st = $("#stations");
-  st.innerHTML = "";
-  for (const d of [...agentDesks, ...workerDesks]) {
-    const div = document.createElement("div");
-    div.className = "station spawnable";
-    div.style.left = d.x + "px"; div.style.top = d.y + "px";
-    div.innerHTML =
-      `<img class="desk px" src="assets/furniture/desk_front.png" alt="">` +
-      `<img class="pc px pc-off" src="assets/furniture/pc_off.png" alt="">` +
-      `<img class="chair px" src="assets/furniture/chair_front.png" alt="">`;
-    div.addEventListener("click", () => {
-      const occupied = [...entities.values()].some(r => r.meta.desk === d);
-      if (!occupied) {
-        setPanel(true);
-        const inp = $("#spawn-text");
-        if (inp) inp.focus();
-      }
-    });
-    st.appendChild(div);
-    d.el = div; d.pc = div.querySelector(".pc");
+  // morrer: o chip "puxa" o braço de volta
+  for(const [k,node] of [...arms]){
+    if(!node.agent||want.has(k)||node.dying)continue;
+    node.dying=true;
+    node.pulse.style.display="none";
+    node.path.style.transition="stroke-dashoffset .7s ease-in";
+    node.path.style.strokeDasharray=node.len;
+    node.path.style.strokeDashoffset=-node.len;
+    node.pad.style.transition="opacity .5s";node.pad.style.opacity=0;
+    node.lbl.style.transition="opacity .5s";node.lbl.style.opacity=0;
+    setTimeout(()=>{usedSlots.delete(node.slot);node.g.remove();arms.delete(k);},750);
   }
 }
-let pcFrame = 0;
-setInterval(() => {   // PC screens flicker while occupied+working
-  pcFrame = (pcFrame + 1) % 3;
-  for (const d of [...agentDesks, ...workerDesks]) {
-    if (!d.pc) continue;
-    const occupant = [...entities.values()].find(r => r.meta.desk === d);
-    const on = occupant && (occupant.meta.state === "working" || occupant.meta.state === "running");
-    d.pc.src = `assets/furniture/${on ? "pc_on" + (pcFrame + 1) : "pc_off"}.png`;
-    d.pc.style.opacity = occupant ? 1 : .35;
+
+// ---------- update ----------
+let LAST=null;
+function apply(eco){
+  const lap=eco.laptop||{}, vm=eco.vm||{};
+  let up=0;
+  for(const [id] of TOOLS){
+    const node=arms.get(id);if(!node)continue;
+    const t=TOOLS.find(t=>t[0]===id);
+    const on=t[2]({laptop:lap,vm});
+    node.up=on; if(on)up++;
+    node.path.classList.toggle("on",on);
+    node.path.classList.toggle("down",!on);
+    node.pad.classList.toggle("on",on);
+    node.pad.classList.toggle("down",!on);
+    node.pulse.classList.toggle("down",!on);
+    node.lbl.classList.toggle("on",on);
+    node.lbl.classList.toggle("down",!on);
   }
-}, 380);
+  syncAgents(Array.isArray(lap.agents)?lap.agents:[]);
+  $("stat").innerHTML=`<b>${up}</b>/${TOOLS.length} ferramentas · `+
+    `<b>${(lap.agents||[]).length}</b> agente(s) vivo(s)`;
+}
 
-function reconcile(state) {
-  const agents = state.agents || [];
-  const present = new Set();
-  let nSubs = 0;
-
-  for (const a of agents) {
-    const di = devinIndex(a.id);
-    const id = "agent:" + a.id;
-    present.add(id);
-    if (!deskOf.has(id)) deskOf.set(id, nextFree(agentDesks) || agentDesks[0]);
-    const ri = di === 1 ? 0 : (hashStr(a.id) % (RACES.length - 1)) + 1;
-    const race = RACES[ri];
-    const meta = {
-      name: `DEVIN ${String(di).padStart(2, "0")}`,
-      kind: "agent",
-      race: race.label,
-      state: a.state,
-      sprite: raceSprite(ri),
-      desk: deskOf.get(id),
-      title: a.title, model: a.model, project: a.project,
-      tool: a.currentTool, toolTitle: a.currentToolTitle,
-      toolArgs: a.lastToolArgs || "",
-      toolCount: a.toolCount, lastActivity: a.lastActivity,
-      subs: a.subagents || [],
-      sid: a.id,
-      files: a.files || [],
-      waiting: !!a.waiting,
-      locked: !!a.locked,
-    };
-    if (!entities.has(id) && !departed.has(id)) spawn(id, meta);
-    const rec = entities.get(id);
-    if (rec) { rec.meta = { ...rec.meta, ...meta }; updateTag(rec); }
-
-    for (const [j, s] of (a.subagents || []).entries()) {
-      const sid = `${a.id}:${j}`;
-      const wid = `worker:${sid}`;
-      const wname = `WORKER ${di}.${j + 1}`;
-      if (s.state === "completed" || departed.has(wid)) {
-        const r = entities.get(wid);
-        if (r && r.phase !== "leaving") depart(r);
-        departed.add(wid);
-        continue;
-      }
-      nSubs++;
-      present.add(wid);
-      if (!deskOf.has(wid)) deskOf.set(wid, nextFree(workerDesks) || workerDesks[0]);
-      const wi = raceIdxForProfile(s.profile, wid);
-      const wrace = RACES[wi];
-      const wm = {
-        name: wname, kind: "worker", race: wrace.label, state: s.state,
-        sprite: `assets/chars/${wrace.f}.png`,
-        desk: deskOf.get(wid), title: s.title, profile: s.profile,
-        sid: a.id, subIdx: j,
-        tool: s.lastTool || null, files: s.files || [],
-      };
-      if (!entities.has(wid)) spawn(wid, wm);
-      const wr = entities.get(wid);
-      if (wr) { wr.meta = { ...wr.meta, ...wm }; updateTag(wr); }
+// ---------- loop de pulso ----------
+function tick(now){
+  for(const node of arms.values()){
+    if(node.dying)continue;
+    if(node.up||node.agent){
+      const t=((now/1400)+node.phase)%1;
+      const pt=node.path.getPointAtLength(node.len*(node.agent?1-t:t)); // agentes pulsam chip→fora
+      node.pulse.setAttribute("cx",pt.x);node.pulse.setAttribute("cy",pt.y);
+      node.pulse.style.opacity=1;
+    }else{
+      const pt=node.path.getPointAtLength(node.len); // vermelho parado no pad
+      node.pulse.setAttribute("cx",pt.x);node.pulse.setAttribute("cy",pt.y);
+      node.pulse.style.opacity=.9;
     }
   }
-
-  // anything vanished from state (idle session expired) → leave quietly
-  for (const [id, rec] of [...entities]) {
-    if (!present.has(id) && rec.phase !== "leaving") { departed.add(id); depart(rec); }
-  }
-
-  renderHud(state, agents.length, nSubs);
-  renderEnts();
-  renderServices(state.services || {});
-  renderTicker(state.events || []);
-  if (selId && entities.has(selId)) renderInspector(entities.get(selId).meta);
+  requestAnimationFrame(tick);
 }
 
-function updateTag(rec) {
-  rec.el.classList.toggle("waiting", !!rec.meta.waiting);
-  rec.el.querySelector(".tag").innerHTML =
-    `<span class="dot ${rec.meta.waiting ? "waiting" : rec.meta.state}"></span>${esc(rec.meta.name)}`;
-  rec.el.querySelector(".tool").textContent =
-    (rec.meta.state === "working" || rec.meta.state === "running")
-      ? (rec.meta.tool || rec.meta.title || "") : "";
+async function poll(){
+  try{const r=await fetch("/api/eco",{cache:"no-store"});const d=await r.json();apply(d.eco||{});}
+  catch(e){$("stat").innerHTML="<b class='bad'>offline</b> — hub/api sem resposta";}
 }
-
-/* ── panels ───────────────────────────────────────────────── */
-function renderHud(state, nA, nS) {
-  $("#s-agents").textContent = nA;
-  $("#s-subs").textContent = nS;
-  $("#s-svc").textContent = Object.keys(state.services || {}).length;
-  const live = state.probe ? state.probe.live : !state.error;
-  $("#live").textContent = live ? "LIVE" : "OFFLINE";
-  $("#live").classList.toggle("off", !live);
-  $("#s-upd").textContent = "Updated " + new Date().toLocaleTimeString();
-}
-
-function renderEnts() {
-  const box = $("#ents"); box.innerHTML = "";
-  $("#n-ent").textContent = entities.size + " entities";
-  for (const rec of entities.values()) {
-    const d = document.createElement("div");
-    d.className = "ent" + (rec.id === selId ? " sel" : "");
-    d.innerHTML = `<span class="dot ${rec.meta.state}"></span>` +
-      `<span class="nm">${esc(rec.meta.name)}</span>` +
-      `<span class="st">${esc(rec.meta.state)}</span>`;
-    d.addEventListener("click", () => select(rec.id));
-    box.appendChild(d);
-  }
-}
-
-function renderServices(services) {
-  const bar = $("#svcbar"), chips = $("#svcchips");
-  bar.innerHTML = ""; chips.innerHTML = "";
-  for (const [key, s] of Object.entries(services)) {
-    const active = s.state === "active";
-    const div = document.createElement("div");
-    div.className = "svc" + (active ? " active" : "");
-    div.innerHTML =
-      `<img class="px" src="assets/furniture/${active ? "pc_on1" : "pc_off"}.png" alt="">` +
-      `<div class="nm">${esc(s.name)}</div>`;
-    div.addEventListener("click", () => select("svc:" + key));
-    bar.appendChild(div);
-    const c = document.createElement("span");
-    c.className = "chip" + (active ? " active" : "");
-    c.textContent = `${s.name}${s.calls ? " · " + s.calls : ""}`;
-    c.addEventListener("click", () => select("svc:" + key));
-    chips.appendChild(c);
-    services[key].entityId = "svc:" + key;
-  }
-  window._services = services;
-}
-
-function renderTicker(events) {
-  const box = $("#ticker-items"); box.innerHTML = "";
-  for (const e of events.slice(0, 6)) {
-    const d = document.createElement("div");
-    d.className = e.status === "failed" ? "failed" : "";
-    d.textContent = "› " + e.text;
-    box.appendChild(d);
-  }
-}
-
-function select(id) {
-  if (id !== selId) { inspState.msgText = ""; inspState.cmdText = ""; inspState.cmdCls = ""; }
-  selId = id;
-  setPanel(true);
-  renderEnts();
-  if (id.startsWith("svc:")) {
-    const s = (window._services || {})[id.slice(4)];
-    if (!s) return;
-    $("#insp-body").innerHTML = `<dl class="kv">
-      <dt>name</dt><dd>${esc(s.name)}</dd><dt>type</dt><dd>${esc(s.kind)}</dd>
-      <dt>state</dt><dd>${esc(s.state)}</dd><dt>last tool</dt><dd>${esc(s.lastTool || "—")}</dd>
-      <dt>calls</dt><dd>${s.calls ?? "—"}</dd>
-      ${s.confidence != null ? `<dt>confidence</dt><dd>${(s.confidence * 100).toFixed(0)}%</dd>` : ""}
-    </dl>`;
-    return;
-  }
-  const rec = entities.get(id);
-  if (rec) renderInspector(rec.meta);
-}
-
-const inspState = { msgText: "", msgFocus: false, cmdText: "", cmdCls: "" };
-function renderInspector(m) {
-  // preserva input/status através dos re-renders do polling
-  const prev = $("#msg-text"), prevStatus = $("#cmd-status");
-  if (prev) {
-    inspState.msgText = prev.value;
-    inspState.msgFocus = document.activeElement === prev;
-  }
-  if (prevStatus) {
-    inspState.cmdText = prevStatus.textContent;
-    inspState.cmdCls = prevStatus.className;
-  }
-  const files = (m.files || []).slice(-6);
-  let ctl = "";
-  if (m.kind === "agent" && m.sid) {
-    ctl = `<div class="ctl">
-      <div class="ctl-row">
-        <input type="text" id="msg-text" placeholder="message ${esc(m.name)}…" maxlength="2000">
-        <button id="msg-send">SEND</button>
-      </div>
-      <div class="cmd-status" id="cmd-status">${esc(inspState.cmdText)}</div>
-    </div>`;
-  } else if (m.kind === "worker" && m.sid != null) {
-    ctl = `<div class="ctl">
-      <div class="ctl-row"><button class="btn danger" id="w-stop">■ STOP WORKER</button></div>
-      <div class="cmd-status" id="cmd-status">${esc(inspState.cmdText)}</div>
-    </div>`;
-  }
-  $("#insp-body").innerHTML = `<dl class="kv">
-    <dt>name</dt><dd>${esc(m.name)}</dd>
-    ${m.race ? `<dt>class</dt><dd>${esc(m.race)}</dd>` : ""}
-    <dt>type</dt><dd>${esc(m.kind)} · ${esc(m.state)}${m.waiting ? ' · <span style="color:var(--amber)">waiting</span>' : ""}</dd>
-    ${m.title ? `<dt>task</dt><dd>${esc(m.title)}</dd>` : ""}
-    ${m.project ? `<dt>project</dt><dd>${esc(m.project)}</dd>` : ""}
-    ${m.model ? `<dt>model</dt><dd>${esc(m.model)}</dd>` : ""}
-    ${m.tool ? `<dt>current tool</dt><dd>${esc(m.tool)}${m.toolArgs ? ` — <span style="color:var(--dim)">${esc(m.toolArgs)}</span>` : ""}</dd>` : ""}
-    ${m.toolCount != null ? `<dt>tool calls</dt><dd>${m.toolCount}</dd>` : ""}
-    ${m.lastActivity ? `<dt>last activity</dt><dd>${new Date(m.lastActivity * 1000).toLocaleTimeString()}</dd>` : ""}
-    ${m.profile ? `<dt>profile</dt><dd>${esc(m.profile)}</dd>` : ""}
-    ${m.subs ? `<dt>subagents</dt><dd>${m.subs.length}</dd>` : ""}
-  </dl>
-  ${files.length ? `<h3 style="margin:10px 0 4px">FILES TOUCHED</h3>
-    <div class="files-list">${files.map(f => `<div>${esc(f)}</div>`).join("")}</div>` : ""}
-  ${ctl}`;
-  if (m.kind === "agent" && m.sid) {
-    const input = $("#msg-text"), btn = $("#msg-send");
-    input.value = inspState.msgText;
-    if (inspState.msgFocus) input.focus();
-    const send = () => {
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = ""; inspState.msgText = "";
-      sendCmd({ action: "message", target: m.sid, text }, $("#cmd-status"));
-    };
-    btn.addEventListener("click", send);
-    input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
-  } else if (m.kind === "worker" && m.sid != null) {
-    $("#w-stop").addEventListener("click", () =>
-      sendCmd({ action: "kill", target: `${m.sid}:${m.subIdx}`, text: m.title || "" },
-              $("#cmd-status")));
-  }
-}
-
-/* ── command path ─────────────────────────────────────────── */
-const cmdWatch = new Map();   // cmdId -> status element
-async function sendCmd(cmd, statusEl) {
-  try {
-    const r = await fetch("/api/cmd", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(cmd),
-    });
-    const d = await r.json();
-    if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
-    if (statusEl) { statusEl.textContent = `» queued ${d.id}`; statusEl.className = "cmd-status"; }
-    if (statusEl) cmdWatch.set(d.id, statusEl);
-  } catch (e) {
-    if (statusEl) { statusEl.textContent = `✗ ${e.message}`; statusEl.className = "cmd-status err"; }
-  }
-}
-async function pollAcks() {
-  if (!cmdWatch.size) return;
-  try {
-    const r = await fetch("/api/cmd/acks", { cache: "no-store" });
-    const d = await r.json();
-    for (const a of d.acks || []) {
-      const el = cmdWatch.get(a.id);
-      if (!el) continue;
-      const icon = { delivered: "✓", spawned: "✓", interrupted: "✓",
-        "interrupt-sent": "✓", error: "✗", unsupported: "✗",
-        "queued-manual": "✎", running: "…", dispatched: "…" }[a.status] || "·";
-      const txt = `${icon} ${a.status}${a.result ? " — " + a.result : ""}`.slice(0, 220);
-      const cls = "cmd-status " + (["error", "unsupported"].includes(a.status) ? "err" : "ok");
-      inspState.cmdText = txt; inspState.cmdCls = cls;   // sobrevive a re-renders
-      if (el.isConnected) { el.textContent = txt; el.className = cls; }
-      else { const cur = $("#cmd-status"); if (cur) { cur.textContent = txt; cur.className = cls; } }
-      if (!["running", "dispatched", "claimed", "queued"].includes(a.status)) {
-        setTimeout(() => cmdWatch.delete(a.id), 45000);
-      }
-    }
-  } catch {}
-}
-setInterval(pollAcks, 2500);
-
-/* ── panel drawer ─────────────────────────────────────────── */
-const pt = $("#panel-toggle");
-function setPanel(open) {
-  document.body.classList.toggle("panel-open", open);
-  pt.textContent = open ? "▶" : "◀";
-  pt.setAttribute("aria-expanded", String(open));
-  try { localStorage.setItem("office-panel", open ? "1" : "0"); } catch {}
-}
-pt.addEventListener("click", () =>
-  setPanel(!document.body.classList.contains("panel-open")));
-addEventListener("keydown", e => {
-  if (e.key === "Escape") setPanel(false);
-});
-{
-  let want = null;
-  try { want = localStorage.getItem("office-panel"); } catch {}
-  setPanel(want === null ? innerWidth > 900 : want === "1");
-}
-
-/* ── fit & poll ───────────────────────────────────────────── */
-function fit() {
-  const w = $("#stage-wrap");
-  const mode = w.clientWidth < 950 ? "compact" : "wide";
-  applyLayout(mode);
-  const L = LAYOUTS[mode];
-  const s = Math.min(w.clientWidth / (L.w + 24), w.clientHeight / (L.h + 24));
-  $("#stage").style.transform = `scale(${s})`;
-}
-new ResizeObserver(fit).observe($("#stage-wrap"));
-applyLayout("wide"); renderStations(); fit();
-
-async function poll() {
-  try {
-    const r = await fetch("/api/state", { cache: "no-store" });
-    reconcile(await r.json());
-  } catch {
-    $("#live").textContent = "OFFLINE"; $("#live").classList.add("off");
-  }
-}
-/* spawn card */
-$("#spawn-btn").addEventListener("click", () => {
-  const inp = $("#spawn-text"), text = inp.value.trim();
-  if (!text) return;
-  inp.value = "";
-  sendCmd({ action: "spawn", target: "", text }, $("#spawn-status"));
-});
-$("#spawn-text").addEventListener("keydown", e => {
-  if (e.key === "Enter") $("#spawn-btn").click();
-});
-
-poll(); setInterval(poll, 2500);
+resize();requestAnimationFrame(tick);poll();setInterval(poll,3000);
 </script>
 </body>
 </html>
