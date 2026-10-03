@@ -130,6 +130,27 @@ npm test        # node --test — stdlib runner, zero deps
 Tests use a scripted fake ACP agent (`tests/fixtures/fake-acp.mjs`) over
 real stdio — no Devin CLI binary or credentials are needed.
 
+## When to use this
+
+- You want to script Devin sessions per repo — create, resume, prompt — from outside the interactive UI.
+- You want a permission gate: `policy.json` allows/denies/asks per tool kind, deny-wins, fail-closed by default.
+- You want to leave an agent loop running without auto-approving every terminal and filesystem request.
+- You want to test what a policy would decide first: `devin-bridge policy --check terminal "<cmd>"`.
+
+## When NOT to use this
+
+- You need agent-side MCP servers — the bridge sends `mcpServers: []`.
+- You cannot tolerate undocumented internals: it uses the CLI's `acp` mode and `_meta.api_key` auth, which may change without notice.
+- You want to take over a session already open elsewhere — `session/load` fails `session_locked`.
+
+## FAQ
+
+**How do I script Devin sessions without auto-approving every permission?** Run `devin-bridge policy --init`, then `devin-bridge new "<repo>"` and `devin-bridge prompt "<repo>" "..."`. Every `terminal/*`, `fs/*` and permission request passes through your `policy.json` — anything not explicitly allowed is denied, and `ask` decisions prompt interactively only on a TTY.
+
+**What does devin-bridge need to authenticate?** Nothing extra. It reads `windsurf_api_key` from the Devin CLI's existing `credentials.toml` (`%APPDATA%\devin\` on Windows, `$XDG_DATA_HOME/devin/` on Linux) and resolves the CLI from `PATH` or `DEVIN_CLI_PATH`. The token is never logged or persisted.
+
+**Is devin-bridge safe to run unattended?** Safer than auto-approving snippets, with caveats. The default is fail-closed: unknown requests are denied, and non-interactive runs stay closed unless `--yes` is passed. It still depends on undocumented `acp` mode internals, so pin a tested Devin CLI version.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).

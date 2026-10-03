@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-bridge
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-bridge"
+repository-code: "https://github.com/Icaro0310/devin-bridge"
+license: MIT
+abstract: "Policy-gated ACP bridge for Devin CLI: isolated sessions per project with fail-closed permission rules for terminal and filesystem access."
+keywords:
+  - ai-agents
+  - devin
+  - agent-client-protocol
+  - policy-engine
+  - automation
+  - nodejs

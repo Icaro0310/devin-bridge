@@ -1,0 +1,25 @@
+# devin-bridge
+
+> Policy-gated Node.js bridge that drives `devin acp` from the outside: create/resume isolated Devin sessions per project, send prompts, stream results — with a `policy.json` deciding what the session may do.
+
+Devin Desktop sessions are not scriptable, and community snippets that drive `devin.exe acp` auto-approve every permission request. devin-bridge speaks ACP over newline-delimited JSON-RPC, manages isolated Devin sessions per project (repo-to-session mapping in `.sessions.json`), and gates `terminal/*`, `fs/*` and `session/request_permission` through a per-repo `policy.json` (allow/deny/ask, deny-wins, fail-closed by default). Auth reuses the Devin CLI's `credentials.toml` — no second runtime, no extra API key.
+
+## Docs
+- [README](https://github.com/Icaro0310/devin-bridge/blob/main/README.md): full documentation
+- [docs/SPEC.md](https://github.com/Icaro0310/devin-bridge/blob/main/docs/SPEC.md): protocol and policy contract
+
+## Key commands
+- `devin-bridge policy --init`: write a starter policy.json in the current directory
+- `devin-bridge new "<repo-path>"`: create a Devin session mapped to a repo
+- `devin-bridge prompt "<repo-path>" "run the test suite"`: send a prompt to that repo's session
+- `devin-bridge prompt "<repo-path>" --file docs/KICKOFF.md`: send a prompt from a file
+- `devin-bridge sessions`: list session mappings
+- `devin-bridge policy --check terminal "rm -rf /"`: test what the policy would decide
+- `npm test`: run the stdlib `node --test` suite against a scripted fake ACP agent
+
+## When to use / when not
+- Use when: scripting Devin sessions per repo with a permission gate; leaving an agent loop running overnight without auto-approving everything; testing permission rules before running.
+- Not when: you need agent-side MCP servers (`mcpServers: []` is sent); you cannot tolerate undocumented internals (`acp` mode + `_meta.api_key` auth may change without notice); you want to steal a session already open elsewhere (`session/load` fails `session_locked`).
+
+## Related
+- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
