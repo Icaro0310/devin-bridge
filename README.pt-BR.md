@@ -213,6 +213,28 @@ MIT — vê [LICENSE](LICENSE). A mobília é creditada no código-fonte; os
 utilitários opcionais de geração de sprites não são necessários para usar o
 Devin Office.
 
+## Quando usar
+
+- Você corre o Devin CLI ou Desktop nesta máquina e quer uma vista ao vivo de todas as sessões ativas, subagents e tool calls.
+- Você quer um dashboard com zero fricção de instalação: só Python 3.10+ stdlib, sem pacotes pip, sem build step JS.
+- Você precisa de um observador estritamente read-only que nunca escreve nos stores do Devin.
+- Você quer o board visível numa segunda máquina numa rede privada (modo split probe + hub).
+
+## Quando NÃO usar
+
+- Você precisa de pesquisar ou analisar sessões *passadas* — o devin-office mostra estado ao vivo; use `devin-search` ou `devin-metrics` para histórico.
+- Você quer controlo remoto de sessões out of the box — message/spawn/kill estão desativados por defeito e exigem opt-in explícito nos dois lados.
+- A máquina não tem instalação Devin CLI/Desktop — não há nada para ler.
+
+## FAQ
+
+**O que é o devin-office?** Um dashboard local que renderiza as suas sessões Devin ao vivo como um circuito SVG no browser. Um processo `daemon.py` lê as bases de sessões do Devin em read-only e serve a página em `127.0.0.1:8788`.
+
+**O devin-office envia os meus dados de sessão para algum lado?** Não, em modo standalone. Tudo corre em loopback contra os seus stores locais do Devin. O modo split opcional (probe + hub) envia metadados de sessão apenas para um endereço de hub que você configura; nunca o aponte para um host público ou não confiável.
+
+**O devin-office precisa de uma API key ou dependências extra?** Não. O dashboard, o probe e o hub usam apenas a standard library do Python. O CLI `devin` só é necessário para o executor opcional e opt-in que ativa os controlos message/spawn/kill.
+
+**Consegue alterar ou matar as minhas sessões Devin?** Só se o ativar explicitamente. A observação é read-only; os endpoints de controlo estão desligados por defeito e exigem `OFFICE_CONTROL_ENABLED=1` mais um token partilhado no hub e no probe.
 
 ---
 
