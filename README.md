@@ -1,3 +1,9 @@
+<div align="center">
+
+<img src="assets/banner.svg" alt="devin-office" width="100%"/>
+
+</div>
+
 # Devin Office
 
 > Unofficial community tooling for Devin. Not affiliated with, endorsed by, or
