@@ -1,0 +1,28 @@
+# devin-office
+
+> A local-first dashboard that renders live Devin CLI/Desktop sessions and subagents as an animated SVG circuit board in the browser.
+
+Devin Office solves observability for Devin sessions: the Devin UI shows one session at a time, while this tool reads Devin's local session databases read-only and renders all active sessions, subagents, and tool calls as a live circuit-board view (a Devin chip with green traces to tools and subagent arms). It is for Devin CLI/Desktop users who want a single glanceable view of what their agents are doing right now. Everything runs on the local machine with Python's standard library only; no pip install, no build step, no telemetry. An optional split mode (probe + private hub) puts the dashboard on a second machine over a private network.
+
+## Docs
+
+- [README](https://github.com/Icaro0310/devin-office/blob/main/README.md): full documentation
+
+## Key commands
+
+- `python3 daemon.py --port 8788`: standalone read-only mode; serve the dashboard at http://localhost:8788 from the Devin machine
+- `python3 hub.py --port 8790`: split mode; serve the dashboard on a hub that receives probe state (token required for non-loopback binds)
+- `python3 probe.py --interval 3`: split mode; poll local Devin state and POST changes to the hub
+- `python3 executor.py`: optional ACP control process for message/spawn/kill (opt-in via OFFICE_CONTROL_ENABLED)
+- `py -3 daemon.py --port 8788`: Windows equivalent of standalone mode
+
+## When to use / when not
+
+- Use when: you run Devin CLI or Desktop locally and want live visibility into sessions, subagents, and tool activity; you want a dashboard with zero dependencies beyond Python 3.10+; you want a read-only observer that never writes to Devin's databases; you need the board on a second machine over a private network (split mode).
+- Not when: you need historical search or analytics over past sessions (use devin-search or devin-metrics); you want to control sessions remotely without explicit opt-in (controls are disabled by default); you have no Devin CLI/Desktop install on the observed machine (there is nothing to read); you need a hosted or multi-user dashboard.
+
+## Related
+
+- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-internals-spec](https://github.com/Icaro0310/devin-internals-spec): documents the session stores this reads
+- [awesome-devin](https://github.com/Icaro0310/awesome-devin): catalog of the ecosystem

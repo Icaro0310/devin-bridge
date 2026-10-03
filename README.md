@@ -205,6 +205,44 @@ publicly reachable endpoint.
 MIT — see [LICENSE](LICENSE). Furniture artwork is credited in the source; the
 optional sprite-generation utilities are not required to run Devin Office.
 
+## When to use this
+
+- You run Devin CLI or Desktop on this machine and want one live view of all
+  active sessions, subagents, and tool calls.
+- You want a dashboard with zero install friction: Python 3.10+ stdlib only,
+  no pip packages, no JS build step.
+- You need a strictly read-only observer that never writes to Devin's stores.
+- You want the board visible on a second machine over a private network
+  (split probe + hub mode).
+
+## When NOT to use this
+
+- You need to search or analyze *past* sessions — devin-office shows live
+  state; use `devin-search` or `devin-metrics` for history.
+- You want remote session control out of the box — message/spawn/kill are
+  disabled by default and require explicit opt-in on both ends.
+- The machine has no Devin CLI/Desktop install — there is nothing to read.
+
+## FAQ
+
+**What is devin-office?** A local dashboard that renders your live Devin
+sessions as an SVG circuit board in the browser. One `daemon.py` process reads
+Devin's session databases read-only and serves the page on `127.0.0.1:8788`.
+
+**Does devin-office send my session data anywhere?** No, in standalone mode.
+Everything runs on loopback against your local Devin stores. The optional
+split mode (probe + hub) sends session metadata only to a hub address you
+configure; never point it at a public or untrusted host.
+
+**Does devin-office need an API key or extra dependencies?** No. The
+dashboard, probe, and hub use only the Python standard library. The `devin`
+CLI is needed solely for the optional, opt-in executor that enables
+message/spawn/kill controls.
+
+**Can it change or kill my Devin sessions?** Only if you explicitly enable it.
+Observation is read-only; the control endpoints are off by default and require
+`OFFICE_CONTROL_ENABLED=1` plus a shared token on both hub and probe.
+
 
 ---
 
