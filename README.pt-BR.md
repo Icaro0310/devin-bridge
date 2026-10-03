@@ -110,6 +110,29 @@ Política de workspace e wrappers finos — sem código específico de
 plataforma. Corre onde o Devin correr; o CI testa em `windows-latest` +
 `ubuntu-latest`.
 
+## Quando usar
+
+- As suas sessões Devin correm grandes tarefas multi-parte em série quando podiam fan out — a skill/rule ensina o modelo quando paralelizar compensa.
+- Você quer limites de workers impostos em código, não em prosa: cap absoluto de 3 workers concorrentes (`DEVIN_MAX_WORKERS` só o pode baixar), nesting proibido sob `DEVIN_INSIDE_SUBAGENT=1`.
+- Você quer o perfil certo por tarefa — `subagent_explore` read-only para investigação, `subagent_general` só quando a tarefa precisa de escritas.
+- Você quer que todo o plano fanned-out carregue `collect=true`, para que o pai tenha de recolher os resultados dos workers antes de reportar.
+
+## Quando NÃO usar
+
+- Você espera que o CLI lance workers — ele só calcula um plano JSON; a skill/rule do workspace fornece as instruções e o runtime do Devin executa os workers.
+- Você não está a trabalhar dentro do Devin — toda a política pressupõe o modelo de subagents em background do Devin.
+- As suas tarefas são inerentemente seriais ou de unidade única — o planner simplesmente devolve 0 workers (corretamente, mas não há nada a ganhar).
+
+## FAQ
+
+**O que é o devin-orchestrator?** Uma política de fan-out para o Devin Desktop em duas partes: uma skill `.devin/` + regra always-on que diz ao modelo quando usar workers em background, e um planner CLI determinístico que transforma sinais estruturados de tarefa num plano de workers impositivo (quantos, que perfil, `collect=true`).
+
+**O planner cria workers ou toca em ficheiros?** Não. `devin-orchestrator plan` emite apenas um plano JSON — sem caminhos, sem URLs, sem comandos, sem acesso ao filesystem. O runtime de subagents do próprio Devin faz o trabalho real.
+
+**Quais são os limites rígidos?** No máximo 3 workers concorrentes (`DEVIN_MAX_WORKERS` só o pode baixar), 0 workers para tarefas triviais/perguntas ou trabalhos de unidade única, 0 workers quando já dentro de um subagent (`DEVIN_INSIDE_SUBAGENT=1`), e perfis read-only para revisão ou trabalho sem escritas.
+
+**Como o instalo num workspace?** Copie `.devin/skills/devin-orchestrator/` para o `.devin/skills/` do seu workspace e `.devin/rules/background-workers.md` para `.devin/rules/` — a regra é always-on e a skill é acionada pelo modelo. Os comandos de cópia para PowerShell e Linux estão em Instalação num workspace acima.
+
 ## Licença
 
 MIT — vê [LICENSE](LICENSE).
