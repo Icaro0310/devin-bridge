@@ -136,3 +136,8 @@ Os testes usam um agente ACP falso e roteirizado
 ## Licença
 
 MIT — ver [LICENSE](LICENSE).
+
+
+---
+
+Se isso te poupou tempo de depuração, uma ⭐ no repositório ajuda outras pessoas a encontrá-lo.

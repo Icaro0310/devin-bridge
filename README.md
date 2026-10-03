@@ -133,3 +133,8 @@ real stdio — no Devin CLI binary or credentials are needed.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+
+---
+
+If this saved you debugging time, a ⭐ on the repo helps others find it.
