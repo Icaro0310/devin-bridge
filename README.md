@@ -19,6 +19,12 @@ The current renderer is an SVG circuit view, not a pixel-art sprite renderer.
 The sprite assets and generator scripts are optional development material; the
 runtime dashboard does not require them.
 
+## Preview
+
+![devin-office dashboard — Devin chip with live traces to tools and subagents](assets/demo.png)
+
+Live demo page (static sample data): [icaro0310.github.io/demos/devin-office.html](https://icaro0310.github.io/demos/devin-office.html)
+
 ## What runs
 
 | Component | Purpose |

@@ -20,6 +20,12 @@ O renderer atual usa uma visualização SVG em circuito, não sprites de pixel a
 Os sprites e scripts de geração são material opcional de desenvolvimento; o
 dashboard não precisa deles para rodar.
 
+## Preview
+
+![dashboard devin-office — chip Devin com traces vivos para ferramentas e subagentes](assets/demo.png)
+
+Demo ao vivo (dados de exemplo): [icaro0310.github.io/demos/devin-office.html](https://icaro0310.github.io/demos/devin-office.html)
+
 ## O que roda
 
 | Componente | Função |
