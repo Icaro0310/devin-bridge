@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""office-daemon — smoke test do devin-office.
+"""office-daemon — standalone local Devin Office server.
 
-Poll sessions.db (WAL, mode=ro) + jev_log.db e serve um WorldState JSON
-em /api/state + o index.html. Zero deps (stdlib only).
+Polls sessions.db read-only and serves WorldState at /api/state plus index.html.
+Zero dependencies (stdlib only).
 
-Uso: python office/daemon.py [--port 8788]
+Usage: python daemon.py [--port 8788]
 """
 import glob
 import json
@@ -29,8 +29,10 @@ def _devin_dirs() -> tuple[Path, Path]:
         d_default = Path(appdata) / "devin"
         c_default = Path(appdata) / "Devin"
     else:
-        d_default = Path.home() / ".local" / "share" / "devin"
-        c_default = Path.home() / ".config" / "Devin"
+        data_home = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+        config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+        d_default = data_home / "devin"
+        c_default = config_home / "Devin"
     return Path(data) if data else d_default, Path(conf) if conf else c_default
 
 
@@ -39,7 +41,11 @@ SESSIONS_DB = DATA_DIR / "cli" / "sessions.db"
 SESSION_LOCKS = DATA_DIR / "cli" / "session_locks"
 ACP_MSG_DIR = CONF_DIR / "User" / "acp-messages"
 VSCDB = CONF_DIR / "User" / "globalStorage" / "state.vscdb"
-JEV_DB = ROOT.parent / "jev_log.db"
+JEV_DB = Path(os.environ["OFFICE_JEV_DB"]).expanduser() if os.environ.get("OFFICE_JEV_DB") else None
+HEARTBEAT_FILE = (
+    Path(os.environ["OFFICE_HEARTBEAT_FILE"]).expanduser()
+    if os.environ.get("OFFICE_HEARTBEAT_FILE") else None
+)
 ACTIVE_WINDOW_S = 15 * 60  # sessão "viva" se teve atividade nos últimos 15 min
 SUBAGENT_TTL_S = 30 * 60
 WAIT_GRACE_S = 20          # turno "terminado" se última msg é texto puro há >20s
@@ -309,7 +315,7 @@ def collect_state() -> dict:
             "name": "Devin",
             "title": (title or "")[:80],
             "model": model or "?",
-            "project": (cwd or "").split("\\")[-1],
+            "project": Path(cwd).name if cwd else "",
             "state": ("failed" if last_tool and last_tool["status"] == "failed"
                       else "idle" if now - (last_act or 0) > 120 else "working"),
             "currentTool": (last_tool["name"] if last_tool else None),
@@ -337,7 +343,7 @@ def collect_state() -> dict:
                 svc["state"] = "active" if t["rid"] == (tools[-1]["rid"] if tools else -1) else svc["state"]
 
     # Jevin
-    if JEV_DB.exists():
+    if JEV_DB is not None and JEV_DB.exists():
         try:
             jdb = ro(JEV_DB)
             row = jdb.execute(
@@ -357,8 +363,8 @@ def collect_state() -> dict:
             pass
 
     # ambient: heartbeat + gateways (sinais de vida dos ficheiros)
-    hb = ROOT.parent / "heartbeat" / "state.json"
-    if hb.exists():
+    hb = HEARTBEAT_FILE
+    if hb is not None and hb.exists():
         try:
             hbd = json.loads(hb.read_text(encoding="utf-8"))
             state["services"]["heartbeat"] = {
@@ -409,6 +415,17 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def _cors_origin(self) -> str:
+        """Cross-origin access is opt-in: OFFICE_CORS_ORIGIN, or loopback
+        origins only (local dashboards on other ports). No wildcard."""
+        configured = os.environ.get("OFFICE_CORS_ORIGIN", "").strip()
+        if configured:
+            return configured
+        origin = self.headers.get("Origin", "")
+        if re.match(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$", origin):
+            return origin
+        return ""
+
     def do_GET(self):
         if self.path.startswith("/api/state"):
             body = json.dumps(cached_state()).encode()
@@ -423,7 +440,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.send_header("Content-Type", "text/plain")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        allow = self._cors_origin()
+        if allow:
+            self.send_header("Access-Control-Allow-Origin", allow)
+            self.send_header("Vary", "Origin")
         self.end_headers()
         try:
             self.wfile.write(body)

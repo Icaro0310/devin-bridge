@@ -60,23 +60,25 @@ const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
 const $=id=>document.getElementById(id);
 const el=(n,at)=>{const e=document.createElementNS(NS,n);for(const k in at)e.setAttribute(k,at[k]);return e;};
 
-// ---------- ferramentas fixas (check → estado no payload /api/eco) ----------
-const TOOLS=[
- ["obsidian","Obsidian",e=>e.laptop?.probes?.obsidian_rest_27123===200],
- ["ollama","Ollama VM",e=>e.laptop?.probes?.ollama_fwd_11435===200],
- ["tailscale","Tailscale",e=>e.laptop?.units?.tailscaled==="active"],
- ["tunnel","Túnel SSH",e=>e.laptop?.units?.["vm-ollama-tunnel"]==="active"],
- ["mcphub","MCP hub",e=>e.laptop?.units?.["mcp-hub"]==="active"],
- ["slack","Slack poll",e=>e.laptop?.units?.["slack-poll"]==="active"||pm2up(e,"slack-poll")],
- ["browser","Browser MCP",e=>[200,406].includes(e.laptop?.probes?.browser_mcp_fwd_8765)],
- ["djaevin","Djævin",e=>!!e.laptop?.tools?.djaevin],
- ["heartbeat","Heartbeat",e=>!!e.laptop?.tools?.heartbeat],
- ["janitor","Janitor",e=>!!e.laptop?.tools?.["session-janitor"]],
- ["compressor","Compressor",e=>!!e.laptop?.tools?.["vault-compressor"]],
- ["dashboard","Dashboard",e=>pm2up(e,"devin-dashboard")],
- ["office","Office",e=>pm2up(e,"devin-office")],
-];
-function pm2up(e,n){return (e.vm?.pm2||[]).some(p=>p.name===n&&p.status==="online")}
+// ---------- ferramentas configuráveis (payload opcional /api/eco) ----------
+let TOOLS=[];
+function toolRows(eco){
+  const rows=[];
+  for(const [host,data] of Object.entries(eco||{})){
+    if(!data||typeof data!=="object")continue;
+    for(const [group,states] of Object.entries({probes:data.probes,units:data.units,tools:data.tools})){
+      if(!states||typeof states!=="object")continue;
+      for(const [name,value] of Object.entries(states)){
+        const up=group==="probes"?[200,406].includes(value):group==="units"?value==="active":!!value;
+        rows.push([`${host}-${group}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${name}`,up]);
+      }
+    }
+    for(const process of data.pm2||[]){
+      rows.push([`${host}-pm2-${process.name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${process.name}`,process.status==="online"]);
+    }
+  }
+  return rows;
+}
 
 // ---------- geometria ----------
 let W,H,CX,CY,R,AR;
@@ -114,8 +116,10 @@ function chipDraw(){
 }
 
 function layout(){
+  const agents=LAST||[];
   chipDraw();
-  const n=TOOLS.length;
+  arms.clear();usedSlots.clear();
+  const n=TOOLS.length||1;
   TOOLS.forEach(([id,label],i)=>{
     const a=-Math.PI/2 + i*(2*Math.PI/n);            // distribui à volta do chip
     const x0=CX+Math.cos(a)*86, y0=CY+Math.sin(a)*56; // saída na borda do chip
@@ -140,6 +144,7 @@ function layout(){
     node.lbl.setAttribute("text-anchor",side>0?"start":"end");
     node.lbl.textContent=label;
   });
+  syncAgents(agents);
 }
 
 // ---------- braços dinâmicos (subagentes) ----------
@@ -187,15 +192,44 @@ function syncAgents(list){
 }
 
 // ---------- update ----------
-let LAST=null;
-function apply(eco){
-  const lap=eco.laptop||{}, vm=eco.vm||{};
-  let up=0;
-  for(const [id] of TOOLS){
+let LAST=[];
+let LAST_STATE={};
+function agentLabels(state){
+  const labels=[];
+  for(const agent of state.agents||[]){
+    if(typeof agent==="string"){labels.push(agent);continue;}
+    if(!agent||typeof agent!=="object")continue;
+    const identity=agent.project||String(agent.id||"").slice(0,8)||"session";
+    const base=`${agent.name||"Devin"} · ${identity}`;
+    labels.push(base);
+    for(const sub of agent.subagents||[]){
+      const name=typeof sub==="string"?sub:(sub.name||sub.agent_id||sub.id||"subagent");
+      labels.push(`${base} · ${name}`);
+    }
+  }
+  return [...new Set(labels)].slice(0,8);
+}
+function updateStat(){
+  const sessions=(LAST_STATE.agents||[]).length;
+  const services=Object.keys(LAST_STATE.services||{}).length;
+  const healthy=TOOLS.filter(t=>t[2]).length;
+  $("stat").innerHTML=`<b>${sessions}</b> Devin session(s) · <b>${services}</b> service(s)`+
+    (TOOLS.length?` · <b>${healthy}</b>/${TOOLS.length} optional checks up`:"");
+}
+function applyState(state){
+  LAST_STATE=state||{};
+  LAST=agentLabels(LAST_STATE);
+  syncAgents(LAST);
+  updateStat();
+}
+function applyEco(eco){
+  const rows=toolRows(eco);
+  const changed=JSON.stringify(rows)!==JSON.stringify(TOOLS);
+  TOOLS=rows;
+  if(changed)layout();
+  for(const [id,,on] of TOOLS){
     const node=arms.get(id);if(!node)continue;
-    const t=TOOLS.find(t=>t[0]===id);
-    const on=t[2]({laptop:lap,vm});
-    node.up=on; if(on)up++;
+    node.up=on;
     node.path.classList.toggle("on",on);
     node.path.classList.toggle("down",!on);
     node.pad.classList.toggle("on",on);
@@ -204,9 +238,7 @@ function apply(eco){
     node.lbl.classList.toggle("on",on);
     node.lbl.classList.toggle("down",!on);
   }
-  syncAgents(Array.isArray(lap.agents)?lap.agents:[]);
-  $("stat").innerHTML=`<b>${up}</b>/${TOOLS.length} ferramentas · `+
-    `<b>${(lap.agents||[]).length}</b> agente(s) vivo(s)`;
+  updateStat();
 }
 
 // ---------- loop de pulso ----------
@@ -228,8 +260,20 @@ function tick(now){
 }
 
 async function poll(){
-  try{const r=await fetch("/api/eco",{cache:"no-store"});const d=await r.json();apply(d.eco||{});}
-  catch(e){$("stat").innerHTML="<b class='bad'>offline</b> — hub/api sem resposta";}
+  try{
+    const r=await fetch("/api/state",{cache:"no-store"});
+    if(!r.ok)throw new Error("state unavailable");
+    applyState(await r.json());
+  }catch(e){
+    $("stat").innerHTML="<b class='bad'>offline</b> — Devin state unavailable";
+    applyEco(null);
+    return;
+  }
+  try{
+    const r=await fetch("/api/eco",{cache:"no-store"});
+    const data=r.ok?await r.json():null;
+    applyEco(data?.eco||null);
+  }catch(e){applyEco(null);}
 }
 resize();requestAnimationFrame(tick);poll();setInterval(poll,3000);
 </script>

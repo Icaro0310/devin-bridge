@@ -4,6 +4,7 @@ Corre com pythonw (sem janela). Se um processo morre, re-spawna.
 Registado no Task Scheduler como 'DevinOffice-Agent' (ONLOGON).
 Log: office/up.log
 """
+import os
 import subprocess
 import sys
 import time
@@ -12,19 +13,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 LOG = ROOT / "up.log"
 CREATE_NO_WINDOW = 0x08000000
+SSH_HOST = os.environ.get("OFFICE_SSH_HOST", "")
+OFFICE_PORT = int(os.environ.get("OFFICE_PORT", "8790"))
+EXPLICIT_HUB = os.environ.get("OFFICE_HUB", "")
+OFFICE_HUB = EXPLICIT_HUB or (
+    f"http://127.0.0.1:{OFFICE_PORT}" if SSH_HOST else ""
+)
+CONTROL_ENABLED = os.environ.get("OFFICE_CONTROL_ENABLED", "").lower() in {
+    "1", "true", "yes", "on"
+}
 
-JOBS = {
-    "tunnel": [
+JOBS = {}
+if SSH_HOST and not EXPLICIT_HUB:
+    JOBS["tunnel"] = [
         "ssh", "-N", "-o", "BatchMode=yes",
         "-o", "ServerAliveInterval=30", "-o", "ServerAliveCountMax=3",
         "-o", "ExitOnForwardFailure=yes",
-        "-L", "8790:127.0.0.1:8790", "devin-vm",
-    ],
-    "probe": [sys.executable, str(ROOT / "probe.py"), "--interval", "3"],
-    # executor ACP: o probe tb o lança lazy se faltar; a guarda de
-    # instância única (state/executor.pid) evita duplicados.
-    "executor": [sys.executable, str(ROOT / "executor.py")],
-}
+        "-L", f"{OFFICE_PORT}:127.0.0.1:{OFFICE_PORT}", SSH_HOST,
+    ]
+if OFFICE_HUB:
+    JOBS["probe"] = [sys.executable, str(ROOT / "probe.py"), "--hub", OFFICE_HUB, "--interval", "3"]
+# executor ACP: o probe também o lança sob demanda; a guarda de instância
+# única (state/executor.pid) evita duplicados.
+if CONTROL_ENABLED:
+    JOBS["executor"] = [sys.executable, str(ROOT / "executor.py")]
 
 
 def log(msg: str) -> None:
@@ -48,6 +60,8 @@ def spawn(name: str) -> subprocess.Popen:
 
 
 def main() -> None:
+    if not OFFICE_HUB:
+        raise SystemExit("Set OFFICE_HUB or OFFICE_SSH_HOST before starting the split-mode agent")
     procs = {name: spawn(name) for name in JOBS}
     log("devin-office agent up")
     while True:

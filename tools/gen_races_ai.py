@@ -6,7 +6,7 @@ Pipeline (igual ao PetDeskSaas gen_pet_pollinations.py):
   content-crop -> bottom-anchored 32x48 cell -> hard alpha -> quantize 16
   -> sheet 7 col x 3 row (down/up/right, mesmas frames nas 3 linhas).
 
-Run:  "C:\\Users\\Utilizador\\AppData\\Local\\pipx\\pipx\\venvs\\frame-ronin-mcp\\Scripts\\python.exe" gen_races_ai.py
+Run:  python gen_races_ai.py   (precisa de Pillow + rembg instalados)
 Cache: ai-src/<race>/<pose>_raw.png — re-runs só refazem o que falta.
 """
 import json, time, urllib.parse, urllib.request

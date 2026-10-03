@@ -1,168 +1,191 @@
 # Devin Office
 
-> **EN:** A pixel-art office that renders **real Devin CLI/Desktop activity** —
-> sessions, subagents and MCP calls — as animated characters in your browser.
-> Zero-dependency Python hub + probe; point it at your own `sessions.db` and VM.
-> Docs below are in Portuguese.
+> Unofficial community tooling for Devin. Not affiliated with, endorsed by, or
+> sponsored by Cognition AI. Devin is a Cognition AI trademark.
+>
+> **[Português (BR)](README.pt-BR.md)** · English
 
-Pixel-art office que observa **atividade real** do Devin CLI/Desktop — sessões,
-subagents e chamadas MCP — e renderiza cada agente como um personagem animado
-num escritório em pixel art, diretamente no browser.
+A local-first dashboard of active Devin CLI/Desktop sessions and subagents. It
+reads Devin's session database read-only and renders activity in a browser. Run
+it on the Devin machine, or send state from a local probe to a private hub.
 
-## Arquitetura
+The current renderer is an SVG circuit view, not a pixel-art sprite renderer.
+The sprite assets and generator scripts are optional development material; the
+runtime dashboard does not require them.
 
+## What runs
+
+| Component | Purpose |
+|---|---|
+| `daemon.py` | Reads the local `sessions.db` read-only and serves `/api/state` plus the dashboard. Standalone mode; no tunnel or remote server. |
+| `probe.py` | In split mode, polls local state and sends updates to a hub only when state changes. Remote controls are disabled by default. |
+| `hub.py` | Serves the dashboard, receives probe state, and exposes health/state endpoints. It binds to loopback by default. |
+| `executor.py` | Optional ACP control process for message/spawn/kill requests. Requires an authenticated Devin CLI and explicit opt-in. |
+| `index.html` | Self-contained SVG dashboard; no JavaScript/CSS build step. |
+
+An optional `OFFICE_ECO_URL` can supply a separate ecosystem-status JSON payload.
+There is no default dependency on another dashboard or maintainer service.
+
+## Requirements
+
+- Devin Desktop or Devin CLI installed on the machine whose sessions you want
+  to observe.
+- Python 3.10 or newer. The dashboard, probe and hub use the Python standard
+  library; no `pip install` is needed.
+- The `devin` CLI on `PATH` is required only for the optional ACP executor.
+
+## Quick start: one machine
+
+This read-only mode is the simplest way to try the dashboard. From a clone of
+this repository:
+
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/Icaro0310/devin-office.git
+cd devin-office
+py -3 daemon.py --port 8788
 ```
-sessions.db (máquina local — Windows %APPDATA%\devin\cli ou
-             Linux ~/.local/share/devin/cli)
-    │
-    ▼
-probe.py ── HTTP POST /api/ingest ──► hub.py (VM, PM2: devin-office)
-(local, muda só                      serve /root/devin-office/
- quando o estado muda)                      │
-                                            ▼
-                              index.html ◄── GET /api/state (browser)
-                              renderer single-file DOM/CSS
-```
 
-- **`probe.py`** — probe magro (~20 MB RAM) que corre na máquina Windows.
-  Recolhe o WorldState via `daemon.collect_state()` (lê `sessions.db` em WAL
-  read-only + `jev_log.db` + heartbeat) e faz POST para o hub **apenas quando
-  o estado muda** (hash SHA-1).
-- **`daemon.py`** — wrapper/collector local; também funciona standalone como
-  smoke test servindo `/api/state` + `index.html` na porta 8788.
-- **`hub.py`** — hub zero-deps (stdlib only) na VM. Recebe `POST /api/ingest`,
-  serve `index.html`, `/api/state`, `/api/health` e `/assets/*` na porta 8790.
-  Auth opcional via env `OFFICE_TOKEN` (header `X-Office-Token`).
-- **`up.pyw`** — supervisor local (pythonw, sem janela) que mantém o túnel SSH
-  (`-L 8790:127.0.0.1:8790 devin-vm`) e o probe vivos, re-spawnando se morrerem.
-- **`index.html`** — renderer single-file: DOM/CSS, sem canvas nem deps.
-
-## URLs
-
-- `http://localhost:8790` — via túnel SSH (mantido pelo `up.pyw`)
-- `http://<your-vm>:8790` — direto via Tailscale/LAN (ex.: `100.x.y.z:8790`)
-
-## Monta no teu setup / Run it on your own Devin install
-
-Tudo é **Python stdlib — zero deps, zero build**. Os paths do Devin são
-detectados por SO e todos os endpoints são configuráveis por env var.
-
-### Modo standalone (uma máquina, sem VM — o mais fácil)
+**Linux:**
 
 ```bash
-python3 daemon.py --port 8788     # Linux/macOS
-py daemon.py --port 8788          # Windows
+git clone https://github.com/Icaro0310/devin-office.git
+cd devin-office
+python3 daemon.py --port 8788
 ```
 
-Serve `index.html` + `/api/state` diretamente — abre `http://localhost:8788`
-e o escritório já renderiza as tuas sessões Devin. Não precisa de hub, probe,
-túnel nem PM2.
+Open `http://localhost:8788`. Stop the server with `Ctrl+C`. It binds to
+loopback and does not write to Devin's databases.
 
-### Modo split (probe no laptop → hub na VM/servidor)
+## Devin data locations
 
-```bash
-# na VM/servidor:
-python3 hub.py                    # escuta :8790, serve o frontend
-
-# na máquina onde o Devin corre:
-OFFICE_HUB=http://<vm>:8790 OFFICE_TOKEN=<segredo-partilhado> \
-    python3 probe.py --interval 3
-```
-
-### Onde ele procura os dados do Devin
-
-| | Windows | Linux |
+| Store | Windows | Linux |
 |---|---|---|
-| `sessions.db`, `session_locks/` | `%APPDATA%\devin\cli\` | `~/.local/share/devin/cli/` |
-| `acp-messages/`, `state.vscdb` | `%APPDATA%\Devin\User\` | `~/.config/Devin/User/` |
-| `credentials.toml` (executor) | `%APPDATA%\devin\` | `~/.local/share/devin/` |
+| `sessions.db`, `session_locks/` | `%APPDATA%\devin\cli\` | `$XDG_DATA_HOME/devin/cli/` (default `~/.local/share/devin/cli/`) |
+| ACP message DBs, `state.vscdb` | `%APPDATA%\Devin\User\` | `$XDG_CONFIG_HOME/Devin/User/` (default `~/.config/Devin/User/`) |
+| `credentials.toml` (executor only) | `%APPDATA%\devin\` | `$XDG_DATA_HOME/devin/` (default `~/.local/share/devin/`) |
 
-### Variáveis de ambiente
+`OFFICE_DATA_DIR` and `OFFICE_CONF_DIR` override the data and UI-config roots.
+Use them when Devin was installed with non-default XDG locations.
 
-| Var | Default | O que faz |
-|---|---|---|
-| `OFFICE_DATA_DIR` | deteção por SO (tabela acima) | override do data dir do Devin |
-| `OFFICE_CONF_DIR` | deteção por SO | override do config dir do Devin |
-| `OFFICE_HUB` | `http://localhost:8790` | URL do hub para o probe |
-| `OFFICE_TOKEN` | — | auth partilhado (`X-Office-Token`); define também no hub |
-| `OFFICE_DEVIN_EXE` | `devin` no PATH | path do executável Devin p/ o executor ACP |
-| `OFFICE_SPAWN_CWD` / `OFFICE_SPAWN_MODE` | repo root / `smart` | cwd e modeId dos spawns via executor |
-| `OFFICE_PROMPT_TIMEOUT` | `900` | timeout (s) dos prompts ACP |
+## Works with Devin alone (Devin-only mode)
 
-### O que ajustar ao teu gosto
+The standalone mode above is the whole product for a single machine: one
+`daemon.py` process reads Devin's local stores and serves the pixel office on
+`127.0.0.1:8788`. No VM, hub, tunnel or second machine is required — the
+split mode below is strictly optional, for when *you* want a dashboard on a
+different computer.
 
-- **Roster de raças**: o mapeamento perfil→raça vive em `daemon.py`
-  (keywords) e nos sprites `assets/chars/ai_<raca>.png` (7×3 frames, 48×48).
-- **`jev_log.db` / `heartbeat/state.json`**: opcionais — são lidos de
-  `../` se existirem (sinais ambient do meu ecossistema); sem eles o
-  escritório funciona na mesma, só sem os personagens "ambient".
-- **Executor** (`executor.py`): controlo real — spawn/message/kill de
-  sessões ACP. Precisa do `devin` CLI autenticado. Se não quiseres
-  controlo (só observação), não o lances: probe+daemon bastam.
+Security posture of standalone mode: loopback-only bind, read-only access to
+Devin's databases, GET endpoints only, and cross-origin reads restricted to
+loopback origins (set `OFFICE_CORS_ORIGIN` explicitly if a dashboard on a
+different host/port legitimately needs to fetch `/api/state`).
 
-## Deploy na VM
+## Split mode: local probe and private hub
 
-O hub serve `/root/devin-office/` na VM. Para atualizar sprites + renderer:
+Use this when the Devin machine should send session state to another computer
+or server. The hub serves the page; the probe stays beside Devin's local data.
+
+### Hub (Linux server)
+
+The safe default is loopback. For remote access, bind only to a private
+interface such as your VPN/Tailscale address, set a long random token, and
+restrict port `8790` with your firewall:
 
 ```bash
-scp assets/chars/ai_*.png index.html devin-vm:/tmp/ && \
-ssh devin-vm "mv /tmp/ai_*.png /root/devin-office/assets/chars/ && \
-              mv /tmp/index.html /root/devin-office/index.html && \
-              pm2 restart devin-office"
+export OFFICE_BIND='<private-interface-ip>'
+export OFFICE_TOKEN='<same-random-secret-used-by-the-probe>'
+python3 hub.py --port 8790
 ```
 
-## Persistência
+A non-loopback bind refuses to start without `OFFICE_TOKEN`. The hub uses plain
+HTTP: keep it on a trusted private network or place it behind a correctly
+configured TLS/authenticating reverse proxy. `/api/state` and `/api/health` are
+readable to clients that can reach the bound interface; the token protects
+POST ingestion and command requests, not those read endpoints.
 
-- **VM**: `hub.py` corre sob PM2 (`pm2 restart devin-office`), com resurrect
-  garantido via supervisord.
-- **Local (Windows)**: `up.pyw` é lançado no logon pela Startup folder
-  (atalho `.vbs` em `shell:startup`) — mantém túnel + probe vivos e escreve
-  em `up.log`.
+### Probe (Windows PowerShell)
 
-## Raças (roster)
+If the hub is reachable over your private network:
 
-Cada subagent é mapeado deterministicamente para uma raça a partir de
-keywords do seu perfil:
-
-| Raça | Classe | Nota |
-|------|--------|------|
-| Mago | — | o boss: DEVIN |
-| Orc | Druida | |
-| Elfo | Arqueiro | |
-| Anjo | Paladino | |
-| Duende | Feiticeiro | |
-| Anão | Guerreiro | |
-| Demônio | Bruxo | |
-| Vampiro | Artíficie | |
-| Lobisomem | Xamã | |
-
-Sheets finais: `assets/chars/ai_<raca>.png` — 7×3 frames de 48×48
-(rows: down / up / right). Sheets originais 4×4 estilo RPG Maker em
-`assets/chars/race_<raca>.png`.
-
-## Sprite pipeline
-
-```
-tools/gen_rpgmaker.py   →  ai-src/rpgmaker/<raca>/  (4×4 sheets via Gemini headless,
-                                                      venv do frame-ronin-mcp)
-tools/fix_sheets.py     →  assets/chars/ai_<raca>.png
-                           (cleanup por connected-component: isola o blob certo
-                            em cada cell, content-crop, bottom-anchor 48×48,
-                            deteção de grid por imagem → sheet office 7×3)
-tools/make_races.py, tools/gen_races_ai.py  →  pipeline alternativo/legado
+```powershell
+$env:OFFICE_HUB = 'http://<private-hub-address>:8790'
+$env:OFFICE_TOKEN = '<same-random-secret-used-by-the-hub>'
+py -3 probe.py --interval 3
 ```
 
-`previews/` contém gifs/pngs de verificação gerados durante o pipeline
-(contact sheets, frames individuais, `_races_anim.gif`).
+For a loopback-only hub, open an SSH tunnel in another terminal and set
+`OFFICE_HUB` to `http://localhost:8790`.
 
-## Requisitos
+### Probe (Linux)
 
-- Python 3 (hub/probe/daemon: stdlib only, zero deps)
-- Pillow (+ numpy, scipy para `fix_sheets.py`) — apenas para as tools de sprites
-- `frame-ronin-mcp` venv para `gen_rpgmaker.py` (Gemini headless)
+```bash
+export OFFICE_HUB='http://<private-hub-address>:8790'
+export OFFICE_TOKEN='<same-random-secret-used-by-the-hub>'
+python3 probe.py --interval 3
+```
 
-## Créditos
+For a loopback-only hub, run `ssh -N -L 8790:127.0.0.1:8790 <user>@<server>` in
+a second terminal and leave `OFFICE_HUB` at `http://localhost:8790`.
 
-- Mobília do escritório: **pixel-agents** (MIT) via
-  [harishkotra/agent-office](https://github.com/harishkotra/agent-office)
-- Sprites das raças: gerados por AI (pipeline acima)
+The probe transmits session metadata and tool activity to the configured hub.
+Do not point it at a public or untrusted host.
+
+## Optional session controls
+
+Observation remains read-only. The hub's `message`, `spawn`, and `kill`
+endpoints are **disabled by default**. To enable them, set
+`OFFICE_CONTROL_ENABLED=1` on both hub and probe, keep the same
+`OFFICE_TOKEN` on both, and use a private network. The local executor starts
+`devin acp` using the authenticated Devin CLI. Never enable controls on a
+publicly reachable endpoint.
+
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `OFFICE_BIND` | `127.0.0.1` | Hub listen address. A non-loopback address requires a token. |
+| `OFFICE_TOKEN` | unset | Shared token for POST requests (`X-Office-Token`). Required for non-loopback hub binding. |
+| `OFFICE_CONTROL_ENABLED` | disabled | Opt in to remote message/spawn/kill controls on hub and probe. |
+| `OFFICE_HUB` | `http://localhost:8790` | Probe destination; `--hub` overrides it. |
+| `OFFICE_INTERVAL` | `3` seconds | Probe poll interval; `--interval` overrides it. |
+| `OFFICE_ECO_URL` | unset | Optional trusted endpoint returning ecosystem-status JSON. |
+| `OFFICE_CORS_ORIGIN` | loopback only | `Access-Control-Allow-Origin` for `/api/state`. Defaults to loopback origins only; never `*`. |
+| `OFFICE_DATA_DIR` | platform path above | Override Devin's CLI data root. |
+| `OFFICE_CONF_DIR` | platform path above | Override Devin's UI-config root. |
+| `OFFICE_DEVIN_EXE` | `devin` on `PATH` | Devin CLI executable for the optional executor. |
+| `OFFICE_SPAWN_CWD` | repository parent | Working directory for spawned sessions. |
+| `OFFICE_SPAWN_MODE` | `smart` | Mode ID for ACP sessions. |
+| `OFFICE_PROMPT_TIMEOUT` | `900` seconds | ACP prompt timeout. |
+| `OFFICE_SSH_HOST` | unset | SSH host alias for the Windows `up.pyw` tunnel. |
+| `OFFICE_PORT` | `8790` | Local/remote port for the `up.pyw` tunnel. |
+
+## Keep it running
+
+- **Windows:** `up.pyw` is an optional split-mode supervisor. Set
+  `OFFICE_HUB` for a reachable hub, or `OFFICE_SSH_HOST` to create a loopback
+  SSH tunnel. Start it from Task Scheduler after defining the required
+  environment variables for that user.
+- **Linux:** run the probe under a user service manager such as `systemd --user`.
+  Use an `EnvironmentFile` with permissions restricted to your user for
+  `OFFICE_HUB` and `OFFICE_TOKEN`; do not put a real token in a committed unit
+  file.
+- **Hub:** use a service manager (systemd, PM2, or equivalent) and keep its
+  bind/firewall policy private.
+
+## Troubleshooting
+
+- `sessions.db not found`: check the paths above or set `OFFICE_DATA_DIR`.
+- GUI sessions absent: check `OFFICE_CONF_DIR`; the CLI database can still
+  work by itself.
+- `devin` not found: install/authenticate the Devin CLI or set
+  `OFFICE_DEVIN_EXE`. This is needed only for controls.
+- Hub rejects probe POSTs: confirm `OFFICE_TOKEN` is the same on both sides.
+- No ecosystem-status nodes: that integration is optional; set
+  `OFFICE_ECO_URL` only if you have a compatible status endpoint.
+
+## License and credits
+
+MIT — see [LICENSE](LICENSE). Furniture artwork is credited in the source; the
+optional sprite-generation utilities are not required to run Devin Office.

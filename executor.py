@@ -2,9 +2,9 @@
 """office-executor — ponte de controlo do devin-office (corre localmente).
 
 Fala ACP (Agent Client Protocol) com um processo `devin acp` filho, usando a
-API key de %APPDATA%/devin/credentials.toml. Isto permite MESMO controlar
-sessões: injectar prompts (session/load + session/prompt), spawnar sessões
-headless (session/new + session/prompt) e interromper turns (session/cancel).
+credencial do Devin Desktop no diretório de dados da plataforma. Isto permite
+controlar sessões: injetar prompts (session/load + session/prompt), criar
+sessões headless (session/new + session/prompt) e interromper turns (session/cancel).
 
 Protocolo de ficheiros (zero deps, resiste a restarts):
   office/cmd_inbox/<id>.json  → {"id","action","target","text","at"}
@@ -46,7 +46,7 @@ _appdata = os.environ.get("APPDATA")
 DATA_DIR = Path(
     os.environ.get("OFFICE_DATA_DIR")
     or (Path(_appdata) / "devin" if _appdata
-        else Path.home() / ".local" / "share" / "devin")
+        else Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "devin")
 )
 CREDENTIALS = DATA_DIR / "credentials.toml"
 SESSION_LOCKS = DATA_DIR / "cli" / "session_locks"
@@ -72,8 +72,10 @@ SPAWN_MODE = os.environ.get("OFFICE_SPAWN_MODE", "smart")  # modeId p/ spawns
 PROMPT_TIMEOUT_S = float(os.environ.get("OFFICE_PROMPT_TIMEOUT", "900"))
 CREATE_NO_WINDOW = 0x08000000
 
-for d in (INBOX, OUTBOX, STATEDIR):
-    d.mkdir(parents=True, exist_ok=True)
+
+def ensure_dirs() -> None:
+    for directory in (INBOX, OUTBOX, STATEDIR):
+        directory.mkdir(parents=True, exist_ok=True)
 
 
 def log(msg: str) -> None:
@@ -439,6 +441,7 @@ def already_running() -> bool:
 
 
 def main():
+    ensure_dirs()
     if already_running():
         return
     try:

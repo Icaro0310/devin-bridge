@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""office-hub — hub do devin-office a correr na VM.
+"""office-hub — private HTTP hub for Devin Office.
 
-Recebe WorldState via POST /api/ingest (vindo do probe local no Windows)
-e serve index.html + /api/state. Zero deps (stdlib only).
+Receives WorldState via POST /api/ingest from a local Windows or Linux probe
+and serves index.html plus /api/state. Zero dependencies (stdlib only).
 
-Uso: python3 hub.py [--port 8790]
-Env: OFFICE_TOKEN (opcional) — se definido, exige header X-Office-Token no ingest.
+Usage: python3 hub.py [--port 8790]
+Env: OFFICE_BIND (default 127.0.0.1); non-loopback binds require OFFICE_TOKEN.
+     OFFICE_CONTROL_ENABLED opts into message/spawn/kill endpoints (default off).
 """
+import ipaddress
 import json
 import os
 import sys
@@ -18,6 +20,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 INDEX = (ROOT / "index.html").read_bytes()
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
+BIND = os.environ.get("OFFICE_BIND", "127.0.0.1")
+CONTROL_ENABLED = os.environ.get("OFFICE_CONTROL_ENABLED", "").lower() in {
+    "1", "true", "yes", "on"
+}
 STALE_AFTER_S = 15
 CMD_FILE = ROOT / "cmd_queue.json"
 CMD_STALE_S = 120          # claimed sem ack há >2min → re-deliver
@@ -25,16 +31,26 @@ CMD_KEEP_S = 3600          # purga comandos terminados após 1h
 MAX_TEXT = 4000
 ACTIONS = {"message", "spawn", "kill"}
 
-ECO_URL = "http://127.0.0.1:8900/api/status"
+ECO_URL = os.environ.get("OFFICE_ECO_URL", "")
 _eco_cache = {"at": 0.0, "data": None}
 
 
-def eco_status() -> dict:
-    """Proxy server-side do /api/status do devin-dashboard (mesma VM).
+def validate_binding(bind: str, token: str) -> None:
+    if bind == "localhost":
+        loopback = True
+    else:
+        try:
+            loopback = ipaddress.ip_address(bind).is_loopback
+        except ValueError as exc:
+            raise ValueError("OFFICE_BIND must be localhost or an IP address") from exc
+    if not loopback and not token:
+        raise ValueError("OFFICE_TOKEN is required when OFFICE_BIND is not loopback")
 
-    Cache 5s — a página pode fazer polling à vontade sem martelar o backend.
-    Devolve também o estado office (probe legacy) fundido.
-    """
+
+def eco_status() -> dict:
+    """Optionally proxy a user-configured ecosystem status endpoint."""
+    if not ECO_URL:
+        return {"eco": None, "office": current_state()}
     now = time.time()
     if _eco_cache["data"] is not None and now - _eco_cache["at"] < 5:
         eco = _eco_cache["data"]
@@ -45,7 +61,7 @@ def eco_status() -> dict:
                 eco = json.loads(r.read().decode())
             _eco_cache.update(at=now, data=eco)
         except Exception:
-            eco = _eco_cache["data"] or {"error": "dashboard api inalcançável"}
+            eco = _eco_cache["data"] or {"error": "ecosystem API unreachable"}
     return {"eco": eco, "office": current_state()}
 
 
@@ -170,7 +186,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         try:
             self.wfile.write(body)
@@ -183,8 +198,14 @@ class Handler(BaseHTTPRequestHandler):
         elif self.path.startswith("/api/state"):
             self._send(200, json.dumps(current_state()).encode())
         elif self.path.startswith("/api/cmd/pending"):
+            if not CONTROL_ENABLED:
+                self._send(403, b'{"error":"control disabled"}')
+                return
             self._send(200, json.dumps({"pending": cmd_pending()}).encode())
         elif self.path.startswith("/api/cmd/acks"):
+            if not CONTROL_ENABLED:
+                self._send(403, b'{"error":"control disabled"}')
+                return
             self._send(200, json.dumps({"acks": cmd_acks()}).encode())
         elif self.path.startswith("/api/health"):
             self._send(200, json.dumps({"ok": True, "uptimeHint": LAST_INGEST["at"]}).encode())
@@ -215,6 +236,9 @@ class Handler(BaseHTTPRequestHandler):
         if TOKEN and self.headers.get("X-Office-Token") != TOKEN:
             self._send(401, b'{"error":"bad token"}')
             return
+        if self.path.startswith("/api/cmd") and not CONTROL_ENABLED:
+            self._send(403, b'{"error":"control disabled"}')
+            return
         try:
             length = int(self.headers.get("Content-Length") or 0)
             payload = json.loads(self.rfile.read(length) or b"{}")
@@ -244,5 +268,10 @@ if __name__ == "__main__":
     port = 8790
     if "--port" in sys.argv:
         port = int(sys.argv[sys.argv.index("--port") + 1])
-    print(f"devin-office hub -> http://0.0.0.0:{port} (token={'set' if TOKEN else 'open'})")
-    ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    try:
+        validate_binding(BIND, TOKEN)
+    except ValueError as exc:
+        print(f"devin-office hub: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+    print(f"devin-office hub -> http://{BIND}:{port} (token={'set' if TOKEN else 'loopback only'})")
+    ThreadingHTTPServer((BIND, port), Handler).serve_forever()

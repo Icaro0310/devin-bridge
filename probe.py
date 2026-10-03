@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from daemon import collect_state  # noqa: E402
-from executor import INBOX, OUTBOX, pid_alive, PIDFILE  # noqa: E402
+from executor import INBOX, OUTBOX, ensure_dirs, pid_alive, PIDFILE  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 EXECUTOR = ROOT / "executor.py"
@@ -35,11 +35,26 @@ CREATE_NO_WINDOW = 0x08000000
 DETACHED = 0x00000008
 
 HUB = os.environ.get("OFFICE_HUB", "http://localhost:8790")
-INTERVAL = 3.0
+INTERVAL = float(os.environ.get("OFFICE_INTERVAL", "3"))
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
+CONTROL_ENABLED = os.environ.get("OFFICE_CONTROL_ENABLED", "").lower() in {
+    "1", "true", "yes", "on"
+}
 
-for d in (INBOX, OUTBOX):
-    d.mkdir(parents=True, exist_ok=True)
+def executor_spawn_kwargs(platform: str | None = None) -> dict:
+    current = os.name if platform is None else platform
+    options = {
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "cwd": str(ROOT),
+        "close_fds": True,
+    }
+    if current == "nt" or current.startswith("win"):
+        options["creationflags"] = CREATE_NO_WINDOW | DETACHED
+    else:
+        options["start_new_session"] = True
+    return options
 
 
 def http(path: str, body=None, timeout=5):
@@ -70,10 +85,7 @@ def ensure_executor() -> None:
         pass
     try:
         subprocess.Popen(
-            [sys.executable, str(EXECUTOR)],
-            creationflags=CREATE_NO_WINDOW | DETACHED,
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, cwd=str(ROOT), close_fds=True)
+            [sys.executable, str(EXECUTOR)], **executor_spawn_kwargs())
         print("probe: executor spawned", flush=True)
     except Exception as exc:
         print(f"probe: executor spawn failed: {exc}", flush=True)
@@ -135,7 +147,9 @@ def main() -> None:
     acked = {}
     last_ensure = [0.0]
     print(f"devin-office probe -> {HUB} every {INTERVAL}s")
-    ensure_executor()
+    if CONTROL_ENABLED:
+        ensure_dirs()
+        ensure_executor()
     while True:
         try:
             state = collect_state()
@@ -149,7 +163,8 @@ def main() -> None:
                     failures += 1
                     if failures in (1, 10, 60):
                         print(f"probe: hub unreachable ({failures} failures)", flush=True)
-            poll_commands(acked, last_ensure)
+            if CONTROL_ENABLED:
+                poll_commands(acked, last_ensure)
         except Exception as exc:
             print(f"probe: collect error: {exc}", flush=True)
         time.sleep(INTERVAL)
