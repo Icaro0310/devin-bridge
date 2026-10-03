@@ -212,3 +212,8 @@ acessível publicamente.
 MIT — vê [LICENSE](LICENSE). A mobília é creditada no código-fonte; os
 utilitários opcionais de geração de sprites não são necessários para usar o
 Devin Office.
+
+
+---
+
+Se isso te poupou tempo de depuração, uma ⭐ no repositório ajuda outras pessoas a encontrá-lo.

@@ -204,3 +204,8 @@ publicly reachable endpoint.
 
 MIT — see [LICENSE](LICENSE). Furniture artwork is credited in the source; the
 optional sprite-generation utilities are not required to run Devin Office.
+
+
+---
+
+If this saved you debugging time, a ⭐ on the repo helps others find it.
