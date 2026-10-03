@@ -13,7 +13,7 @@ test("Linux credentials follow XDG_DATA_HOME", () => {
       env: { XDG_DATA_HOME: "/xdg/data" },
       home: "/home/user",
     }),
-    "/xdg/data/devin/credentials.toml",
+    path.join("/xdg/data", "devin", "credentials.toml"),
   );
 });
 
@@ -35,7 +35,7 @@ test("explicit credentials path overrides platform defaults", () => {
       env: { DEVIN_CREDENTIALS_PATH: "/custom/credentials.toml" },
       home: "/home/user",
     }),
-    "/custom/credentials.toml",
+    path.resolve("/custom/credentials.toml"),
   );
 });
 
