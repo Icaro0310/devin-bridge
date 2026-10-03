@@ -1,9 +1,11 @@
 # devin-orchestrator
 
-Política de fan-out com workers em background para o Devin Desktop.
-Decompõe trabalho não-trivial em unidades disjuntas, executa como subagents
-em background e mantém a sessão principal interativa — o usuário continua
-escrevendo enquanto os workers rodam.
+> Ferramenta comunitária não oficial, sem afiliação ou endosso da Cognition AI.
+>
+> **[English](README.md)** · Português (BR)
+
+Política de fan-out com workers em background para o Devin Desktop. Fornece
+uma skill/regra e um planner determinístico; o Devin executa o plano aprovado.
 
 ## O que é
 
@@ -35,15 +37,42 @@ comandos; o planner não cria repositórios nem toca o filesystem.
 ## Uso
 
 ```bash
-pip install -e ".[dev]"
 devin-orchestrator plan '{"kind":"implementation","independent_units":3,"needs_write":true,"estimated_scope":"large","summary":"API + UI + testes"}'
 ```
 
 ## Instalação num workspace
 
-Copie `.devin/skills/devin-orchestrator/` para `.devin/skills/` do workspace
-e `.devin/rules/background-workers.md` para `.devin/rules/`. A regra é
-always-on; a skill é acionada pelo modelo.
+Clone o repositório para copiar os ficheiros de extensão do Devin:
+
+```bash
+git clone https://github.com/Icaro0310/devin-orchestrator.git
+```
+
+Na raiz do workspace, copie os ficheiros com o shell do teu SO.
+
+**Windows (PowerShell):**
+
+```powershell
+New-Item -ItemType Directory -Force .devin\skills, .devin\rules | Out-Null
+Copy-Item -Recurse devin-orchestrator\.devin\skills\devin-orchestrator .devin\skills\
+Copy-Item devin-orchestrator\.devin\rules\background-workers.md .devin\rules\
+```
+
+**Linux:**
+
+```bash
+mkdir -p .devin/skills .devin/rules
+cp -R devin-orchestrator/.devin/skills/devin-orchestrator .devin/skills/
+cp devin-orchestrator/.devin/rules/background-workers.md .devin/rules/
+```
+
+A regra é always-on; a skill é acionada pelo modelo.
+
+## Limitações
+
+O CLI apenas devolve um plano JSON; não cria workers nem modifica ficheiros.
+A skill/regra do workspace fornece instruções; executar workers depende do
+suporte de subagents em background do Devin.
 
 ## Limites de CPU
 
@@ -51,14 +80,30 @@ always-on; a skill é acionada pelo modelo.
 - Trabalho pesado (build/teste) dentro dos workers roda single-process.
 - Prefira workers read-only para investigação.
 
+## Desenvolvimento
+
+```bash
+pip install -e ".[dev]"
+```
+
 ## Teste
 
 ```bash
 pytest -q   # matriz comportamental: trivial→0, unidades→min(N,3), aninhado→0, ...
 ```
 
+## Funciona só com o Devin (modo Devin-only)
+
+O planner corre localmente; a execução dos subagentes acontece dentro do
+próprio runtime do Devin, por isso o Devin é a única dependência — nenhum
+framework de agentes, fila ou servidor de modelos separado para instalar.
+
 ## Suporte de plataformas
 
 Política de workspace e wrappers finos — sem código específico de
 plataforma. Corre onde o Devin correr; o CI testa em `windows-latest` +
 `ubuntu-latest`.
+
+## Licença
+
+MIT — vê [LICENSE](LICENSE).
