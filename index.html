@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Devin Hub — ecossistema vivo</title>
+<title>devin-office — live session board</title>
 <style>
   :root{
     --bg:#0b0e14; --chip:#161b26; --chip-line:#3a4157; --trace:#2a3145;
@@ -30,10 +30,10 @@
   .lbl{font-size:10.5px;fill:var(--dim);letter-spacing:.3px}
   .lbl.on{fill:#bfe8cf}
   .lbl.down{fill:#d99}
-  .agent .arm{stroke:#3a4a63}
-  .agent .pad{stroke:#6ea8e8}
-  .agent .pulse{fill:#6ea8e8;filter:drop-shadow(0 0 6px #6ea8e8)}
-  .agent .lbl{fill:#9ab8e8}
+  .agent .arm{stroke:#2f4a3a}
+  .agent .pad{stroke:#7ee787}
+  .agent .pulse{fill:#7ee787;filter:drop-shadow(0 0 6px #7ee787)}
+  .agent .lbl{fill:#a9f0b3}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
   #chip-body{fill:var(--chip);stroke:var(--chip-line);stroke-width:2;
     filter:drop-shadow(0 0 18px rgba(87,217,141,.18))}
@@ -41,19 +41,19 @@
   .pin{stroke:var(--chip-line);stroke-width:2}
   #legend{position:fixed;bottom:12px;left:20px;font-size:10.5px;color:var(--dim);z-index:5}
   .lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 0 14px;vertical-align:middle}
-  .lg.g{background:var(--green)} .lg.b{background:#6ea8e8} .lg.r{background:var(--red)}
+  .lg.g{background:var(--green)} .lg.b{background:#7ee787} .lg.r{background:var(--red)}
 </style>
 </head>
 <body>
 <header>
-  <div><h1>DEVIN HUB</h1><div class="sub">circuito vivo do ecossistema</div></div>
-  <div id="stat">a ligar…</div>
+  <div><h1>devin-office</h1><div class="sub">live session board</div></div>
+  <div id="stat">connecting…</div>
 </header>
 <svg id="board"></svg>
 <div id="legend">
-  <span class="lg g"></span>ferramenta ativa
-  <span class="lg r"></span>caída
-  <span class="lg b"></span>subagente (braço dinâmico)
+  <span class="lg g"></span>active tool
+  <span class="lg r"></span>down
+  <span class="lg b"></span>subagent (dynamic arm)
 </div>
 <script>
 const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
