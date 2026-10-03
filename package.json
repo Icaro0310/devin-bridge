@@ -1,7 +1,7 @@
 {
-  "name": "devin-bridge",
+  "name": "@icaro0310/devin-bridge",
   "version": "0.1.0",
-  "description": "Cross-platform policy-gated ACP bridge for Devin CLI — isolated sessions per project with fail-closed permission rules.",
+  "description": "Cross-platform policy-gated ACP bridge for Devin CLI \u2014 isolated sessions per project with fail-closed permission rules.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -35,5 +35,8 @@
     "agent-client-protocol",
     "policy",
     "sessions"
-  ]
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
 }
