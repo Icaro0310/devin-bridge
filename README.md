@@ -2,6 +2,9 @@
 
 <img src="assets/banner.svg" alt="devin-office" width="100%"/>
 
+<a href="https://github.com/Icaro0310/devin-office/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/devin-office/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
+
+
 </div>
 
 # Devin Office
