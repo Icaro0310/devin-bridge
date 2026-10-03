@@ -1,11 +1,10 @@
 /**
- * acp-client.js — ACP (Agent Client Protocol) client for the devin.exe
- * embedded in Devin Desktop. Clean port of the proven client from
- * personal-agent-system/gateways/src/devin-acp.js.
+ * acp-client.js — cross-platform ACP client for the Devin CLI embedded in
+ * Devin Desktop. Implements newline-delimited JSON-RPC over stdio.
  *
  * The CLI's `acp` mode authenticates via `authenticate` with
- * `_meta.api_key` = `windsurf_api_key` from credentials.toml (the session
- * token the IDE keeps fresh) — it does NOT use `devin auth login` state.
+ * `_meta.api_key` = `windsurf_api_key` from the platform credentials.toml
+ * (the session token the IDE keeps fresh) — it does NOT use `devin auth login` state.
  * That enables real Devin sessions without the interactive PKCE flow.
  *
  * SECURITY: the token is read for the handshake and is never logged,
@@ -17,39 +16,83 @@
  * requires asking; headless asks deny). See src/policy.js.
  *
  * Env:
- *   DEVIN_CLI_PATH   path of devin.exe (auto-detect under %LOCALAPPDATA%)
- *   ACP_TIMEOUT_MS   per-call timeout (default 300000)
+ *   DEVIN_CLI_PATH          Devin CLI executable (auto-detected from PATH)
+ *   DEVIN_CREDENTIALS_PATH  credentials.toml override
+ *   ACP_TIMEOUT_MS          per-call timeout (default 300000)
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import { spawn } from "node:child_process";
 import { Policy } from "./policy.js";
 
-function devinBinCandidates() {
-  const roots = [];
-  if (process.env.DEVIN_CLI_PATH) roots.push(process.env.DEVIN_CLI_PATH);
-  if (process.env.LOCALAPPDATA) {
-    roots.push(path.join(
-      process.env.LOCALAPPDATA,
+export function credentialsPath({
+  platform = process.platform,
+  env = process.env,
+  home = os.homedir(),
+} = {}) {
+  if (env.DEVIN_CREDENTIALS_PATH) return path.resolve(env.DEVIN_CREDENTIALS_PATH);
+  if (platform === "win32") {
+    const appdata = env.APPDATA || path.join(home, "AppData", "Roaming");
+    return path.join(appdata, "devin", "credentials.toml");
+  }
+  if (platform === "darwin") {
+    return path.join(home, "Library", "Application Support", "devin", "credentials.toml");
+  }
+  const dataHome = env.XDG_DATA_HOME || path.join(home, ".local", "share");
+  return path.join(dataHome, "devin", "credentials.toml");
+}
+
+export function devinBinCandidates({
+  platform = process.platform,
+  env = process.env,
+  home = os.homedir(),
+} = {}) {
+  const candidates = [];
+  if (env.DEVIN_CLI_PATH) candidates.push(env.DEVIN_CLI_PATH);
+  if (platform === "win32") {
+    const local = env.LOCALAPPDATA || path.join(home, "AppData", "Local");
+    candidates.push(path.join(
+      local,
       "Programs", "Devin", "resources", "app",
       "extensions", "windsurf", "devin", "bin", "devin.exe",
     ));
   }
-  return roots;
+  candidates.push(platform === "win32" ? "devin.exe" : "devin");
+  return candidates;
 }
 
-export function devinBin() {
-  const hit = devinBinCandidates().find((p) => p && fs.existsSync(p));
-  return hit || null;
+function findExecutable(candidate, env, platform) {
+  if (path.isAbsolute(candidate) || candidate.includes("/") || candidate.includes("\\")) {
+    return fs.existsSync(candidate) ? candidate : null;
+  }
+  const extensions = platform === "win32"
+    ? (env.PATHEXT || ".EXE;.CMD;.BAT").split(";")
+    : [""];
+  for (const directory of (env.PATH || "").split(path.delimiter)) {
+    for (const extension of extensions) {
+      const file = path.join(directory, candidate + extension);
+      if (fs.existsSync(file)) return file;
+    }
+  }
+  return null;
+}
+
+export function devinBin(opts = {}) {
+  const env = opts.env || process.env;
+  const platform = opts.platform || process.platform;
+  return devinBinCandidates(opts)
+    .map((candidate) => findExecutable(candidate, env, platform))
+    .find(Boolean) || null;
 }
 
 /** Read windsurf_api_key from %APPDATA%\devin\credentials.toml (IDE session token). */
 export function readSessionToken() {
-  const cred = path.join(process.env.APPDATA || "", "devin", "credentials.toml");
+  const cred = credentialsPath();
   if (!fs.existsSync(cred)) {
-    throw new Error("credentials.toml not found — sign in to Devin Desktop first");
+    throw new Error(`credentials.toml not found at ${cred} — sign in to Devin Desktop first`);
   }
   const m = /windsurf_api_key\s*=\s*"([^"]+)"/.exec(fs.readFileSync(cred, "utf8"));
   if (!m) throw new Error("windsurf_api_key missing from credentials.toml");
@@ -77,7 +120,7 @@ export class DevinAcp {
     bin, args = ["acp"], cwd, policy, askHandler, token, timeoutMs, onNotification,
   } = {}) {
     this.bin = bin || devinBin();
-    if (!this.bin) throw new Error("devin.exe not found (set DEVIN_CLI_PATH)");
+    if (!this.bin) throw new Error("Devin CLI not found (set DEVIN_CLI_PATH)");
     this.args = args;
     this.cwd = cwd || process.cwd();
     this.policy = policy || Policy.default({ root: this.cwd });

@@ -19,13 +19,10 @@ against a real repo overnight.
 
 ## Prior art
 
-This project adapts the proven client from
-`personal-agent-system` (`gateways/src/devin-acp.js`, ~600 lines:
-NDJSON JSON-RPC over stdio, session lifecycle, terminal/fs/permission
-handlers, model/cost notifications) and its dispatcher
-(`scripts/devin-repo-task.js`, repo→sessionId mapping). It does not
-reinvent the protocol — it ports it and adds the missing permission
-gate. See [docs/SPEC.md](docs/SPEC.md).
+This tool speaks ACP over newline-delimited JSON-RPC, manages isolated Devin
+sessions per project, and adds a permission gate for terminal, filesystem and
+permission requests. See [docs/SPEC.md](docs/SPEC.md) for the protocol and
+policy contract.
 
 ## What makes it Devin-native
 
@@ -40,30 +37,54 @@ gate. See [docs/SPEC.md](docs/SPEC.md).
 
 ## Install
 
+Requires Node.js ≥ 20, Git, and an authenticated Devin CLI/Desktop install.
+
+**Windows (PowerShell):**
+
+```powershell
+git clone https://github.com/Icaro0310/devin-bridge.git
+cd devin-bridge
+npm install -g .
+```
+
+**Linux:**
+
 ```bash
 git clone https://github.com/Icaro0310/devin-bridge.git
 cd devin-bridge
-npm install -g .        # or: npm link
+npm install -g .
 ```
 
-Requires Node ≥ 20 and a signed-in Devin Desktop (it reads the session
-token from `%APPDATA%\devin\credentials.toml`; the token is never logged
-or persisted).
+The bridge reads `windsurf_api_key` from `%APPDATA%\\devin\\credentials.toml`
+on Windows and `$XDG_DATA_HOME/devin/credentials.toml` on Linux (normally
+`~/.local/share/devin/credentials.toml`). Override with `DEVIN_CREDENTIALS_PATH`;
+the Devin CLI is resolved from `PATH` or `DEVIN_CLI_PATH`. The token is never
+logged or persisted.
 
 ## Usage
 
+The examples below use a policy file in the current directory. `new` and
+`prompt` store a repo-to-session mapping in `.sessions.json`; keep that local
+file out of commits because it contains session IDs and local paths.
+
+**Windows (PowerShell):**
+
+```powershell
+devin-bridge policy --init
+devin-bridge new "C:\src\my-repo"
+devin-bridge prompt "C:\src\my-repo" "run the test suite and fix failures"
+devin-bridge prompt "C:\src\my-repo" --file docs\KICKOFF.md
+devin-bridge sessions
+devin-bridge policy --check terminal "rm -rf /"
+```
+
+**Linux:**
+
 ```bash
-# optional: write a policy for the current project
-devin-bridge policy --init          # creates ./policy.json (see policy.example.json)
-
-# create an isolated session for a repo (recorded in .sessions.json)
-devin-bridge new C:\path\to\repo
-
-# dispatch a prompt — resumes the mapped session automatically
-devin-bridge prompt C:\path\to\repo "run the test suite and fix failures"
-devin-bridge prompt C:\path\to\repo --file docs\KICKOFF-M1.md --yes
-
-# inspect
+devin-bridge policy --init
+devin-bridge new "$HOME/src/my-repo"
+devin-bridge prompt "$HOME/src/my-repo" "run the test suite and fix failures"
+devin-bridge prompt "$HOME/src/my-repo" --file docs/KICKOFF.md
 devin-bridge sessions
 devin-bridge policy --check terminal "rm -rf /"
 ```
@@ -71,13 +92,22 @@ devin-bridge policy --check terminal "rm -rf /"
 Policy `ask` decisions prompt the operator interactively on a TTY;
 non-interactive runs stay fail-closed unless `--yes` is passed.
 
+## Works with Devin alone (Devin-only mode)
+
+devin-bridge *is* the Devin-only path: it drives `devin acp` directly using
+the `credentials.toml` the Devin CLI already stores — no second runtime, no
+message broker, no extra API key. Requirements are just Node.js >= 20 and a
+signed-in Devin CLI (`devin` on PATH or `DEVIN_CLI_PATH`). The permission
+policy is fail-closed by default: anything not explicitly allowed is denied,
+and credentials are never logged or persisted.
+
 ## Limitations
 
-- Uses the **undocumented** `acp` mode and `_meta.api_key` auth of the
-  bundled `devin.exe`; both may change without notice (authenticated
-  against Devin CLI 3000.10.x).
-- Windows-first (paths, spawn semantics); works on Linux CI for tests
-  but real sessions target the Windows Desktop install.
+- Uses the **undocumented** `acp` mode and `_meta.api_key` authentication
+  of the Devin CLI; both may change without notice (tested against Devin CLI
+  3000.10.x).
+- Windows and Linux are supported. The executable and credentials file are
+  resolved per OS; use `DEVIN_CLI_PATH` and `DEVIN_CREDENTIALS_PATH` to override.
 - `session/load` cannot steal a session open elsewhere — it fails
   `session_locked` and the dispatcher falls back to `session/new`.
 - Does not expose agent-side MCP servers (`mcpServers: []` is sent).
@@ -89,7 +119,7 @@ npm test        # node --test — stdlib runner, zero deps
 ```
 
 Tests use a scripted fake ACP agent (`tests/fixtures/fake-acp.mjs`) over
-real stdio — no `devin.exe` needed.
+real stdio — no Devin CLI binary or credentials are needed.
 
 ## License
 

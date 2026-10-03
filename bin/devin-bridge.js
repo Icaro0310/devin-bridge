@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * devin-bridge — policy-gated bridge that drives `devin.exe acp`.
+ * devin-bridge — policy-gated bridge that drives `devin acp` on Windows or Linux.
  *
  * Commands:
  *   new <repo-dir>                 create an isolated session (updates .sessions.json)

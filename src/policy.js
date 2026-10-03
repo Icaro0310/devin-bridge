@@ -81,7 +81,7 @@ export function globToRegExp(pattern, { command = false, caseSensitive = true } 
 /**
  * Normalise a filesystem path for matching: resolved against `root` when
  * relative, backslashes → "/", no trailing slash. Drive-letter and UNC
- * forms count as absolute on every platform (this tool is Windows-first).
+ * forms count as absolute on every platform.
  */
 export function normalizeFsPath(p, root = process.cwd()) {
   const s = String(p);
