@@ -133,6 +133,27 @@ npm test        # node --test — runner da stdlib, zero deps
 Os testes usam um agente ACP falso e roteirizado
 (`tests/fixtures/fake-acp.mjs`) sobre stdio real — sem o CLI Devin ou credenciais.
 
+## Quando usar
+
+- Você quer scriptar sessões Devin por repo — criar, retomar, dar prompt — fora da UI interativa.
+- Você quer um gate de permissões: `policy.json` permite/nega/pergunta por tipo de tool, deny vence, fail-closed por defeito.
+- Você quer deixar um loop de agente a correr sem auto-aprovar cada pedido de terminal e filesystem.
+- Você quer testar primeiro o que uma política decidiria: `devin-bridge policy --check terminal "<cmd>"`.
+
+## Quando NÃO usar
+
+- Você precisa de servidores MCP do lado do agente — a bridge envia `mcpServers: []`.
+- Você não tolera internals não documentados: usa o modo `acp` do CLI e auth `_meta.api_key`, que podem mudar sem aviso.
+- Você quer assumir uma sessão já aberta noutro lado — `session/load` falha com `session_locked`.
+
+## FAQ
+
+**Como scripto sessões Devin sem auto-aprovar cada permissão?** Execute `devin-bridge policy --init`, depois `devin-bridge new "<repo>"` e `devin-bridge prompt "<repo>" "..."`. Cada pedido `terminal/*`, `fs/*` e de permissão passa pelo seu `policy.json` — tudo o que não estiver explicitamente permitido é negado, e decisões `ask` perguntam interativamente apenas num TTY.
+
+**Do que o devin-bridge precisa para autenticar?** De nada extra. Lê `windsurf_api_key` do `credentials.toml` existente do Devin CLI (`%APPDATA%\devin\` no Windows, `$XDG_DATA_HOME/devin/` no Linux) e resolve o CLI a partir do `PATH` ou de `DEVIN_CLI_PATH`. O token nunca é logado nem persistido.
+
+**É seguro correr o devin-bridge sem supervisão?** Mais seguro do que auto-aprovar snippets, com ressalvas. O defeito é fail-closed: pedidos desconhecidos são negados, e execuções não interativas ficam fechadas a menos que `--yes` seja passado. Ainda depende de internals não documentados do modo `acp`, por isso fixe uma versão testada do Devin CLI.
+
 ## Licença
 
 MIT — ver [LICENSE](LICENSE).
