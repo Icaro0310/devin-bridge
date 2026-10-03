@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-orchestrator
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-orchestrator"
+repository-code: "https://github.com/Icaro0310/devin-orchestrator"
+license: MIT
+abstract: "Background-worker fan-out policy for Devin Desktop: a skill/rule pair plus a deterministic planner CLI that decides how many subagents a task may spawn."
+keywords: [devin, orchestration, subagents, parallelization, policy, planner]

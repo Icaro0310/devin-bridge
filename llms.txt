@@ -1,0 +1,27 @@
+# devin-orchestrator
+
+> Background-worker fan-out policy for Devin Desktop: a skill/rule pair plus a deterministic planner CLI that decides how many subagents a task may spawn.
+
+devin-orchestrator solves the problem of uncontrolled (or absent) parallelization in Devin sessions: the model needs to know when to fan a task out into background workers, and the hard limits must live in code, not in prose the model can argue away. It ships two layers: (1) a `.devin/skills/devin-orchestrator/` skill and an always-on `.devin/rules/background-workers.md` rule that instruct the model to fan out when a task has 2+ independent units or large scope, and (2) a deterministic planner (`devin-orchestrator plan '<json-signals>'`) that takes structured task signals and returns how many workers are allowed (absolute cap: 3, `DEVIN_MAX_WORKERS` can only lower), which profile to use (`subagent_general` vs read-only `subagent_explore`), and enforced constraints — 0 workers for trivial/question tasks, nesting forbidden under `DEVIN_INSIDE_SUBAGENT=1`, `collect=true` on every fanned-out plan. The plan is data only: no paths, no commands, no filesystem access. Unofficial community tooling, not affiliated with Cognition AI.
+
+## Docs
+
+- [README](https://github.com/Icaro0310/devin-orchestrator/blob/main/README.md): full documentation and workspace install steps
+
+## Key commands
+
+- `pipx install "devin-orchestrator @ git+https://github.com/Icaro0310/devin-orchestrator.git"`: install the planner CLI (Python >= 3.10)
+- `devin-orchestrator plan '{"kind":"implementation","independent_units":3,"needs_write":true,"estimated_scope":"large","summary":"API + UI + tests"}'`: compute a worker plan as JSON (`workers`, `mode`, `profiles`, `collect`, `limits`)
+- `cp -R devin-orchestrator/.devin/skills/devin-orchestrator .devin/skills/` + `cp devin-orchestrator/.devin/rules/background-workers.md .devin/rules/`: install the skill and always-on rule into a Devin workspace
+- `pytest -q`: behavioral matrix test suite (trivial -> 0, units -> min(N,3), nested -> 0, ...)
+
+## When to use / when not
+
+- Use when: your Devin sessions run large multi-part tasks serially when they could fan out; you want worker caps enforced in code (max 3 concurrent, no nesting) rather than as prompt suggestions; you want read-only `subagent_explore` workers for investigation and write-capable ones only where needed; you already use Devin's background-subagent support and want a policy layer on top.
+- Not when: you expect the CLI to spawn workers itself (it only computes a JSON plan — the skill/rule supplies instructions and Devin's runtime executes them); you are not on Devin (the policy only makes sense inside Devin's subagent model); your tasks are inherently serial or single-unit (the planner correctly returns 0 workers anyway); you need more than 3 concurrent workers (the cap is absolute by design).
+
+## Related
+
+- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [poordjaevin](https://github.com/Icaro0310/poordjaevin): calibrated decision layer that can gate risky worker actions
+- [devin-office](https://github.com/Icaro0310/devin-office): live dashboard to watch fanned-out workers and subagents

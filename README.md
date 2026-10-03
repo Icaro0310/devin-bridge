@@ -133,6 +133,52 @@ or model server to install.
 Workspace-level policy and thin wrappers — no platform-specific code.
 Runs wherever Devin runs; CI tests on `windows-latest` + `ubuntu-latest`.
 
+## When to use this
+
+- Your Devin sessions run large multi-part tasks serially when they could
+  fan out — the skill/rule teaches the model when parallelizing pays.
+- You want worker limits enforced in code, not in prose: absolute cap of 3
+  concurrent workers (`DEVIN_MAX_WORKERS` can only lower it), nesting
+  forbidden under `DEVIN_INSIDE_SUBAGENT=1`.
+- You want the right profile per task — read-only `subagent_explore` for
+  investigation, `subagent_general` only when the task needs writes.
+- You want every fanned-out plan to carry `collect=true`, so the parent
+  must gather worker results before reporting.
+
+## When NOT to use this
+
+- You expect the CLI to spawn workers — it only computes a JSON plan; the
+  workspace skill/rule supplies the instructions and Devin's runtime
+  executes the workers.
+- You are not working inside Devin — the whole policy presupposes Devin's
+  background-subagent model.
+- Your tasks are inherently serial or single-unit — the planner will just
+  return 0 workers (correctly, but there is nothing to gain).
+
+## FAQ
+
+**What is devin-orchestrator?** A fan-out policy for Devin Desktop in two
+parts: a `.devin/` skill + always-on rule that tells the model when to use
+background workers, and a deterministic planner CLI that turns structured
+task signals into an enforceable worker plan (how many, which profile,
+`collect=true`).
+
+**Does the planner create workers or touch files?** No. `devin-orchestrator
+plan` outputs a JSON plan only — no paths, no URLs, no commands, no
+filesystem access. Devin's own subagent runtime does the actual work.
+
+**What are the hard limits?** At most 3 concurrent workers
+(`DEVIN_MAX_WORKERS` can only lower it), 0 workers for trivial/question
+tasks or single-unit jobs, 0 workers when already inside a subagent
+(`DEVIN_INSIDE_SUBAGENT=1`), and read-only profiles for review or
+no-write work.
+
+**How do I install it in a workspace?** Copy `.devin/skills/devin-orchestrator/`
+into your workspace's `.devin/skills/` and
+`.devin/rules/background-workers.md` into `.devin/rules/` — the rule is
+always-on and the skill is model-triggered. Copy commands for PowerShell
+and Linux are in Usage above.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
