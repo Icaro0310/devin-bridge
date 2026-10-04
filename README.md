@@ -101,6 +101,32 @@ devin-bridge policy --check terminal "rm -rf /"
 Policy `ask` decisions prompt the operator interactively on a TTY;
 non-interactive runs stay fail-closed unless `--yes` is passed.
 
+### Session labels (`--label`)
+
+Every session the bridge *creates* is tagged so downstream automation
+(devin-janitor classification, devin-dream scorekeeping) can recognise
+bridge-created sessions deterministically:
+
+```bash
+devin-bridge new "$HOME/src/my-repo" --label janitor:classification
+devin-bridge prompt "$HOME/src/my-repo" "..." --label dream:scorekeeping
+```
+
+- Format is `origin:purpose` (default `bridge:unlabeled`). Each part is
+  a slug (`[A-Za-z0-9._-]`, ≤64 chars) — a label can never carry prompt
+  text or session content.
+- The label is sent to the agent under `session/new` `_meta`
+  (`{"devin-bridge": {origin, purpose, label}}`), the spec-sanctioned ACP
+  extension point. Whether Devin persists `_meta` is undocumented.
+- The **authoritative record** is a local sidecar
+  `session-labels.json` mapping `sessionId → {label, origin, purpose,
+  createdAt, cwd}`, written atomically in the bridge state dir:
+  `$XDG_STATE_HOME/devin-bridge` (Linux), `%LOCALAPPDATA%\devin-bridge`
+  (Windows). Override with `DEVIN_BRIDGE_STATE_DIR` or `--state-dir`.
+- Resumed sessions keep the label they were created with; the bridge
+  never relabels sessions it did not create. `devin-bridge sessions`
+  shows the recorded label per session.
+
 Named presets (`--preset`, or `policy --init --preset <name>`):
 
 - `ask` — the shipped fail-closed default; everything requires approval.

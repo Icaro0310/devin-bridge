@@ -42,6 +42,9 @@ no login flow.
   credential stores; `checkPermissionRequest` classifies ACP tool calls.
 - `src/dispatch.js` — `SessionMap` (`.sessions.json` persistence, atomic
   writes), `ensureSession` (resume-or-create), `runTask` (dispatch).
+- `src/labels.js` — `origin:purpose` session labels (BR-4): `parseLabel`
+  slug validation, `bridgeStateDir`, `LabelStore` sidecar
+  (`session-labels.json`, atomic writes).
 - `bin/devin-bridge.js` — CLI: `new`, `resume`, `prompt`, `sessions`,
   `policy`.
 - Tests: `node --test`, zero dependencies, fake ACP agent fixture
@@ -85,7 +88,7 @@ orchestrator script / human
 |---|---|---|
 | client→agent | `initialize` | protocolVersion 1 + client capabilities (fs, terminal) |
 | client→agent | `authenticate` | `methodId: "devin-browser"`, `_meta.api_key` = windsurf_api_key |
-| client→agent | `session/new` | `{cwd, mcpServers: []}` → `sessionId`, `configOptions` |
+| client→agent | `session/new` | `{cwd, mcpServers: [], _meta?}` → `sessionId`, `configOptions`; `_meta["devin-bridge"]` carries the `{origin, purpose, label}` tag |
 | client→agent | `session/load` | resume; fails `session_locked` if open elsewhere |
 | client→agent | `session/prompt` | `[{type:"text",text}]` → `stopReason`, `usage` |
 | client→agent | `session/cancel` | notification; sent on client-side timeout |
@@ -170,6 +173,42 @@ Rules:
   `session/load` (locked, missing, expired) falls back to `session/new`
   and the mapping is rewritten with the live id.
 
+### 8a. Session labels (BR-4)
+
+Sessions the bridge *creates* are labelled `origin:purpose` so
+downstream automation can recognise them deterministically.
+
+- `--label origin:purpose` (default `bridge:unlabeled`); each part must
+  match `[A-Za-z0-9][A-Za-z0-9._-]{0,63}` — slugs only, so a label can
+  never carry prompt text or session content.
+- `session/new` sends `_meta: {"devin-bridge": {origin, purpose,
+  label}}` (the ACP `_meta` extension point). Whether the agent
+  persists `_meta` is undocumented — it is best-effort only.
+- The authoritative record is the sidecar `session-labels.json` in the
+  bridge state dir (`$XDG_STATE_HOME/devin-bridge` on Linux,
+  `%LOCALAPPDATA%\devin-bridge` on Windows;
+  `DEVIN_BRIDGE_STATE_DIR`/`--state-dir` override):
+
+```json
+{
+  "version": 1,
+  "sessions": {
+    "<sessionId>": {
+      "label": "janitor:classification",
+      "origin": "janitor",
+      "purpose": "classification",
+      "createdAt": "2026-10-04T00:00:00.000Z",
+      "cwd": "/abs/repo"
+    }
+  }
+}
+```
+
+- Whitelisted fields only — never prompts, tokens or session content.
+- Written atomically; missing/corrupt files load empty.
+- Resumed sessions keep their creation label; `session/load` is never
+  relabelled.
+
 ## 9. Security requirements (enforced in code)
 
 1. Default policy is `ask` for every capability — nothing auto-approves.
@@ -193,6 +232,7 @@ devin-bridge policy --init [--force]         write ./policy.json example
 devin-bridge policy --check <cap> <target>   print one decision
 
 Options: --sessions-file f  --policy f  --bin path  --timeout-ms n  --yes
+         --label origin:purpose  --state-dir d
 ```
 
 - `prompt` streams agent text to stderr live; stdout ends with a RESULT

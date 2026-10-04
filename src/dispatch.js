@@ -69,9 +69,17 @@ export class SessionMap {
  * - any load failure (locked, missing, expired) falls back to session/new;
  * - the mapping is always written back with the live sessionId.
  *
+ * BR-4: when a *new* session is created, `label` ({label, origin,
+ * purpose}, see src/labels.js) is sent to the agent under `_meta` and
+ * recorded in `labelStore` (LabelStore sidecar). Resumed sessions keep
+ * whatever label they were created with — the bridge does not relabel
+ * sessions it did not create.
+ *
  * @returns {Promise<{sessionId: string, resumed: boolean}>}
  */
-export async function ensureSession(acp, repoDir, { map, resumeId } = {}) {
+export async function ensureSession(acp, repoDir, {
+  map, resumeId, label, labelStore,
+} = {}) {
   const key = path.basename(path.resolve(repoDir));
   const existing = resumeId || map?.get(key)?.sessionId;
 
@@ -84,8 +92,9 @@ export async function ensureSession(acp, repoDir, { map, resumeId } = {}) {
       // fall through to session/new — locked/stale ids are expected churn
     }
   }
-  await acp.newSession(repoDir);
+  await acp.newSession(repoDir, { label });
   map?.set(key, { sessionId: acp.sessionId, cwd: path.resolve(repoDir) });
+  labelStore?.record(acp.sessionId, { ...(label || {}), cwd: repoDir });
   return { sessionId: acp.sessionId, resumed: false };
 }
 
@@ -101,14 +110,19 @@ export async function runTask(acp, repoDir, {
   sessionsFile,
   resumeId,
   timeoutMs,
+  label,
+  labelStore,
 } = {}) {
   if (!fs.existsSync(repoDir)) throw new Error(`repo dir does not exist: ${repoDir}`);
   if (!promptText?.trim()) throw new Error("empty prompt");
 
   const key = path.basename(path.resolve(repoDir));
   const map = SessionMap.load(sessionsFile);
-  const { sessionId, resumed } = await ensureSession(acp, repoDir, { map, resumeId });
+  const { sessionId, resumed } = await ensureSession(acp, repoDir, {
+    map, resumeId, label, labelStore,
+  });
   map.save();
+  labelStore?.save();
 
   const res = await acp.prompt(promptText, { timeoutMs });
   return { repo: key, sessionId, resumed, ...res };

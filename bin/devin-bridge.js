@@ -16,6 +16,11 @@
  *   --bin <path>          devin.exe path (default: DEVIN_CLI_PATH/autodetect)
  *   --timeout-ms <n>      per-call timeout (default 300000; prompt waits up to 45min)
  *   --yes                 auto-approve policy "ask" prompts (headless runs)
+ *   --label origin:purpose  tag sessions the bridge creates (default
+ *                           "bridge:unlabeled"; sent as session/new _meta
+ *                           and recorded in the labels sidecar)
+ *   --state-dir <d>       bridge state dir (default: DEVIN_BRIDGE_STATE_DIR
+ *                         or platform state dir; holds session-labels.json)
  *   --help
  */
 
@@ -25,6 +30,9 @@ import readline from "node:readline";
 import { DevinAcp } from "../src/acp-client.js";
 import { Policy, examplePolicyDoc, presetPolicyDoc } from "../src/policy.js";
 import { SessionMap, ensureSession, runTask } from "../src/dispatch.js";
+import {
+  LABELS_FILENAME, LabelStore, bridgeStateDir, parseLabel,
+} from "../src/labels.js";
 
 const CAPS = ["terminal", "fsRead", "fsWrite", "network"];
 
@@ -57,6 +65,7 @@ Commands:
 
 Options: --sessions-file f --policy f --preset ask|read-only|full
          --bin path --timeout-ms n --yes --help
+         --label origin:purpose (default bridge:unlabeled) --state-dir d
 
 Presets: read-only denies terminal/fsWrite/network (observe-only intake);
 full allows everything — HIGH RISK, trusted scratch environments only.`);
@@ -117,23 +126,36 @@ function makeClient(opts, { forPrompt = false } = {}) {
   return acp;
 }
 
+/** Labels sidecar in the bridge state dir (--state-dir > env > platform). */
+function loadLabelStore(opts) {
+  const dir = opts["state-dir"]
+    ? path.resolve(opts["state-dir"])
+    : bridgeStateDir();
+  return LabelStore.load(path.join(dir, LABELS_FILENAME));
+}
+
 const CMDS = {
   async new(opts) {
     const repoDir = opts._[0];
     if (!repoDir) usage(1);
     const abs = path.resolve(repoDir);
     if (!fs.existsSync(abs)) throw new Error(`repo dir does not exist: ${abs}`);
+    const label = parseLabel(opts.label);
+    const store = loadLabelStore(opts);
     const acp = makeClient(opts);
     try {
       await acp.init();
-      await acp.newSession(abs);
+      await acp.newSession(abs, { label });
       const file = opts["sessions-file"] || ".sessions.json";
       const map = SessionMap.load(file);
       map.set(path.basename(abs), { sessionId: acp.sessionId, cwd: abs });
       map.save();
+      store.record(acp.sessionId, { ...label, cwd: abs });
+      store.save();
       if (opts.model) await acp.setModel(opts.model);
       console.log(JSON.stringify({
         repo: path.basename(abs), sessionId: acp.sessionId,
+        label: label.label,
         models: acp.listModels(), model: acp.currentModel(),
       }, null, 2));
     } finally { acp.stop(); }
@@ -149,8 +171,13 @@ const CMDS = {
       await acp.init();
       const file = opts["sessions-file"] || ".sessions.json";
       const map = SessionMap.load(file);
-      const out = await ensureSession(acp, abs, { map, resumeId: opts.resume });
+      const store = loadLabelStore(opts);
+      const out = await ensureSession(acp, abs, {
+        map, resumeId: opts.resume,
+        label: parseLabel(opts.label), labelStore: store,
+      });
       map.save();
+      store.save();
       console.log(JSON.stringify({
         repo: path.basename(abs), ...out, model: acp.currentModel(),
       }, null, 2));
@@ -172,6 +199,8 @@ const CMDS = {
         sessionsFile: opts["sessions-file"] || ".sessions.json",
         resumeId: opts.resume,
         timeoutMs: opts["timeout-ms"] ? Number(opts["timeout-ms"]) : 45 * 60 * 1000,
+        label: parseLabel(opts.label),
+        labelStore: loadLabelStore(opts),
       });
       process.stderr.write("\n");
       console.log("===== RESULT =====");
@@ -188,10 +217,14 @@ const CMDS = {
   sessions(opts) {
     const file = opts["sessions-file"] || ".sessions.json";
     const map = SessionMap.load(file);
-    if (opts.json) return console.log(JSON.stringify(map.list(), null, 2));
-    if (!map.list().length) return console.log(`(no sessions in ${path.resolve(file)})`);
-    for (const e of map.list()) {
-      console.log(`${e.repo}\t${e.sessionId}\t${e.updatedAt}\t${e.cwd}`);
+    const store = loadLabelStore(opts);
+    const withLabels = map.list().map((e) => ({
+      ...e, label: store.get(e.sessionId)?.label || null,
+    }));
+    if (opts.json) return console.log(JSON.stringify(withLabels, null, 2));
+    if (!withLabels.length) return console.log(`(no sessions in ${path.resolve(file)})`);
+    for (const e of withLabels) {
+      console.log(`${e.repo}\t${e.sessionId}\t${e.updatedAt}\t${e.cwd}\t${e.label || "-"}`);
     }
   },
 

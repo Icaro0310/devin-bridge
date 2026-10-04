@@ -14,7 +14,8 @@
     ".": "./src/acp-client.js",
     "./acp-client": "./src/acp-client.js",
     "./policy": "./src/policy.js",
-    "./dispatch": "./src/dispatch.js"
+    "./dispatch": "./src/dispatch.js",
+    "./labels": "./src/labels.js"
   },
   "files": [
     "bin",

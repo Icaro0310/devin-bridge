@@ -101,6 +101,32 @@ devin-bridge policy --check terminal "rm -rf /"
 Decisões `ask` perguntam ao operador num TTY; em execuções não-interativas,
 ficam negadas por omissão a menos que `--yes` seja passado.
 
+### Rótulos de sessão (`--label`)
+
+Toda sessão que a bridge *cria* é marcada para que a automação a jusante
+(classificação do devin-janitor, scorekeeping do devin-dream) reconheça
+sessões criadas pela bridge de forma determinística:
+
+```bash
+devin-bridge new "$HOME/src/meu-repo" --label janitor:classification
+devin-bridge prompt "$HOME/src/meu-repo" "..." --label dream:scorekeeping
+```
+
+- O formato é `origin:purpose` (padrão `bridge:unlabeled`). Cada parte é
+  um slug (`[A-Za-z0-9._-]`, ≤64 chars) — um rótulo nunca carrega texto
+  de prompt nem conteúdo de sessão.
+- O rótulo é enviado ao agente em `_meta` do `session/new`
+  (`{"devin-bridge": {origin, purpose, label}}`), o ponto de extensão
+  previsto na spec ACP. Se o Devin persiste `_meta` é não-documentado.
+- O **registo autoritativo** é um sidecar local `session-labels.json`
+  mapeando `sessionId → {label, origin, purpose, createdAt, cwd}`,
+  gravado atomicamente no diretório de estado da bridge:
+  `$XDG_STATE_HOME/devin-bridge` (Linux), `%LOCALAPPDATA%\devin-bridge`
+  (Windows). Sobreposição via `DEVIN_BRIDGE_STATE_DIR` ou `--state-dir`.
+- Sessões retomadas mantêm o rótulo com que foram criadas; a bridge
+  nunca rotula sessões que não criou. `devin-bridge sessions` mostra o
+  rótulo registado por sessão.
+
 Presets nomeados (`--preset`, ou `policy --init --preset <nome>`):
 
 - `ask` — o padrão fail-closed; tudo exige aprovação.

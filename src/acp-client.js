@@ -348,8 +348,26 @@ export class DevinAcp {
     return this;
   }
 
-  async newSession(cwd = this.cwd) {
-    const res = await this.call("session/new", { cwd, mcpServers: [] });
+  /**
+   * Create a session. `label` is an optional {label, origin, purpose}
+   * object (see src/labels.js) sent to the agent under `_meta` — the
+   * spec-sanctioned ACP extension point — so downstream tooling can tag
+   * bridge-created sessions. Whether the agent persists `_meta` is
+   * undocumented; the deterministic record is the local sidecar
+   * (LabelStore) written by the dispatcher.
+   */
+  async newSession(cwd = this.cwd, { label } = {}) {
+    const params = { cwd, mcpServers: [] };
+    if (label && (label.origin || label.purpose)) {
+      params._meta = {
+        "devin-bridge": {
+          origin: label.origin,
+          purpose: label.purpose,
+          label: label.label || `${label.origin}:${label.purpose}`,
+        },
+      };
+    }
+    const res = await this.call("session/new", params);
     this.sessionId = res.sessionId;
     this.configOptions = res.configOptions || [];
     return res;

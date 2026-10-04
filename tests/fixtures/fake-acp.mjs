@@ -12,6 +12,7 @@
  *   "WRITE_FILE <path>"    fs/write_text_file (content "fixture-write"),
  *                          echoes WRITE_OK or WRITE_ERR:<msg>
  *   "COST <n>"             emits a notification containing creditCost <n>
+ *   "DUMP_SESSION_NEW"     replies NEW_PARAMS:<json of last session/new params>
  *   anything else          replies "echo: <text>"
  */
 
@@ -20,6 +21,7 @@ import readline from "node:readline";
 const pending = new Map();
 let nextId = 1000;
 let model = "swe-2";
+let lastSessionNewParams = null;
 
 const MODEL_OPT = () => ({
   id: "model",
@@ -134,6 +136,9 @@ async function runPrompt(id, params) {
     if (text.startsWith("COST ")) {
       return finish(id, "cost noted", { cost: Number(text.slice(5)) || 0 });
     }
+    if (text === "DUMP_SESSION_NEW") {
+      return finish(id, `NEW_PARAMS:${JSON.stringify(lastSessionNewParams)}`);
+    }
     return finish(id, `echo: ${text}`);
   } catch (e) {
     respond(id, null, { code: -32603, message: String(e.message || e) });
@@ -158,6 +163,7 @@ readline.createInterface({ input: process.stdin }).on("line", (line) => {
     case "authenticate":
       return respond(msg.id, {});
     case "session/new":
+      lastSessionNewParams = msg.params || {};
       return respond(msg.id, { sessionId: "fx-new-1", configOptions: [MODEL_OPT()] });
     case "session/load": {
       const sid = msg.params?.sessionId;
