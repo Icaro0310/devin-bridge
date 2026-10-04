@@ -440,9 +440,46 @@ def already_running() -> bool:
         return False
 
 
+_MUTEX_HANDLE = None
+_MUTEX_NAME = "Local\\DevinOfficeExecutor"
+
+
+def acquire_singleton() -> bool:
+    """Race-free singleton guard.
+
+    The pidfile is TOCTOU: two spawns (up.pyw + probe lazy-spawn) pass the
+    check before either writes the file. A Windows named mutex is atomic —
+    the kernel arbitrates. POSIX keeps the pidfile check.
+    """
+    global _MUTEX_HANDLE
+    if sys.platform != "win32":
+        return not already_running()
+    import ctypes
+    h = ctypes.windll.kernel32.CreateMutexW(None, True, _MUTEX_NAME)
+    if not h:
+        return not already_running()
+    if ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        ctypes.windll.kernel32.CloseHandle(h)
+        return False
+    _MUTEX_HANDLE = h
+    return True
+
+
+def singleton_alive() -> bool:
+    """True when an executor is already alive (non-acquiring — probe-safe)."""
+    if sys.platform != "win32":
+        return already_running()
+    import ctypes
+    h = ctypes.windll.kernel32.OpenMutexW(0x00100000, False, _MUTEX_NAME)
+    if not h:
+        return False
+    ctypes.windll.kernel32.CloseHandle(h)
+    return True
+
+
 def main():
     ensure_dirs()
-    if already_running():
+    if not acquire_singleton():
         return
     try:
         Executor().serve()

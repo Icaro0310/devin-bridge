@@ -32,11 +32,21 @@ if SSH_HOST and not EXPLICIT_HUB:
         "-L", f"{OFFICE_PORT}:127.0.0.1:{OFFICE_PORT}", SSH_HOST,
     ]
 if OFFICE_HUB:
-    JOBS["probe"] = [sys.executable, str(ROOT / "probe.py"), "--hub", OFFICE_HUB, "--interval", "3"]
+    # OFFICE_HUBS (lista, vírgulas) viaja pelo ambiente — --hub só quando
+    # a lista não está definida, para não achatar multi-hub num só.
+    probe_cmd = [sys.executable, str(ROOT / "probe.py"), "--interval", "3"]
+    if not os.environ.get("OFFICE_HUBS"):
+        probe_cmd += ["--hub", OFFICE_HUB]
+    JOBS["probe"] = probe_cmd
 # executor ACP: o probe também o lança sob demanda; a guarda de instância
-# única (state/executor.pid) evita duplicados.
+# única (named mutex no Windows, state/executor.pid no POSIX) evita duplicados.
 if CONTROL_ENABLED:
     JOBS["executor"] = [sys.executable, str(ROOT / "executor.py")]
+# fallback local: hub read-only em OFFICE_LOCAL_HUB_PORT — o dashboard fica
+# disponível mesmo com a VM/túnel em baixo.
+LOCAL_HUB_PORT = int(os.environ.get("OFFICE_LOCAL_HUB_PORT", "0"))
+if LOCAL_HUB_PORT:
+    JOBS["hub-local"] = [sys.executable, str(ROOT / "hub.py"), "--port", str(LOCAL_HUB_PORT)]
 
 
 def log(msg: str) -> None:
