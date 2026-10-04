@@ -94,6 +94,19 @@ Overlays are **whole-file replacements**, not merges — what the profile
 ships is what the file becomes. Files are JSONC: `//` and `/* */`
 comments allowed, trailing commas not.
 
+### The `lab` profile (G3 A/B runs)
+
+`profiles/lab/` is a hermetic config for A/B skill evaluation: a pinned
+model (`swe-pinned` is a placeholder — set the real id in `config.json`,
+`User/settings.json` and `profile.json` before `--apply`), **no hooks
+and no MCP servers at all** — deliberate, since learning-loop /
+prompt-logging hooks and the memory MCP would let attempt n learn from
+attempt n-1 — plus `autoGenerateMemories` off. Label sessions `g3-ab`.
+Caveat: it is still unconfirmed whether Devin can isolate the config dir
+per workspace; if it can't, run attempts **serially** and let
+`devin-switch` swap `lab` in/out between them (`rollback` restores the
+previous bytes exactly). See `profiles/README.md`.
+
 ## What happens on `--apply`
 
 1. **Plan** — per file: `create` / `modify` / `unchanged` / `skip`

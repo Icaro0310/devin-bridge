@@ -1,0 +1,11 @@
+{
+    "devin.acp.agentPreferences": {
+        "devin-cli": {
+            "mode": "bypass",
+            "model": "swe-pinned"
+        }
+    },
+    "devin.autoContinue": 0,
+    "devin.acp.diffZonesEnabled": false,
+    "window.zoomLevel": 1.0
+}

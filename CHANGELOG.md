@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `profiles/lab/` — G3 A/B evaluation overlay: pinned model
+  (`swe-pinned` placeholder — set the real id before `--apply`),
+  explicitly empty `hooks` and `mcpServers` (no learning-loop or
+  prompt-logging hooks, no memory MCP, `autoGenerateMemories` off), and
+  the serial-vs-isolated config-dir caveat documented in
+  `profiles/README.md`. Mirrored in `src/devin_switch/profiles/` for
+  pipx installs.
+
 ## [0.1.0] - 2026-10-04
 
 ### Added

@@ -31,7 +31,7 @@ one gets a `skip` in the plan — the file is simply not managed. Other
 credential-named files (`.env*`, `*.pem`, `*secret*`, …) may be applied
 but their contents are withheld from every diff and `show` output.
 
-## The two examples
+## The bundled examples
 
 - `corporate/` — locked-down: cascade auto-execution and web requests
   disabled, `terminal.execute` requires approval, MCP goes through a
@@ -39,6 +39,25 @@ but their contents are withheld from every diff and `show` output.
   `SessionStart`.
 - `personal/` — permissive: local stdio MCP servers (memory, filesystem,
   obsidian), ACP enabled, a prompt hook plus session start/end hooks.
+- `lab/` — G3 A/B skill evaluation: the model is **pinned** to one fixed
+  id for both arms (`swe-pinned` is a placeholder — set the real id in
+  `config.json`, `User/settings.json` and `profile.json` before
+  `--apply`). `hooks` and `mcpServers` are **empty on purpose** — no
+  learning-loop or prompt-logging hooks and no memory MCP, so attempt n
+  cannot learn from attempt n-1 (`autoGenerateMemories` is off too).
+  Sessions are labelled `g3-ab`.
+
+### lab: serial vs isolated
+
+Open question in the G3 design — whether Devin can isolate the config
+dir per workspace. Two modes follow:
+
+- **Isolated** — if each workspace can have its own data/config roots,
+  give every workspace the `lab` overlay and run attempts in parallel.
+- **Serial** — if all sessions share one config dir (the common case),
+  run attempts **one at a time** and use `devin-switch` to swap `lab`
+  in for the attempts and back out afterwards (`rollback` restores the
+  pre-switch bytes exactly).
 
 Edit a copy in `./profiles` (or point `--profiles-dir` /
 `DEVIN_SWITCH_PROFILES_DIR` at your own directory) — these are starting

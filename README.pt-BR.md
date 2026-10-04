@@ -95,6 +95,20 @@ Overlays são **substituições de arquivo inteiro**, não merges — o que o
 perfil traz é o que o arquivo vira. Os arquivos são JSONC: comentários
 `//` e `/* */` permitidos, vírgulas à direita não.
 
+### O perfil `lab` (rodadas A/B do G3)
+
+`profiles/lab/` é uma config hermética para avaliação A/B de skills:
+modelo pinado (`swe-pinned` é placeholder — defina o id real em
+`config.json`, `User/settings.json` e `profile.json` antes do
+`--apply`), **sem hooks e sem nenhum servidor MCP** — deliberado, porque
+hooks de learning-loop / prompt-logging e o MCP de memória deixariam a
+tentativa n aprender com a n-1 — e `autoGenerateMemories` desligado.
+Rotule as sessões como `g3-ab`. Ressalva: ainda está em aberto se o
+Devin consegue isolar o diretório de config por workspace; se não
+conseguir, rode as tentativas **em série** e deixe o `devin-switch`
+alternar o `lab` entre elas (`rollback` restaura os bytes anteriores
+exatamente). Veja `profiles/README.md`.
+
 ## O que acontece no `--apply`
 
 1. **Plano** — por arquivo: `create` / `modify` / `unchanged` / `skip`

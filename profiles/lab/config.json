@@ -1,0 +1,49 @@
+// Lab overlay for the Devin data-dir config.json — G3 A/B skill runs.
+// Applied verbatim (whole-file replace) by `devin-switch use lab`.
+//
+// Design intent (see profiles/README.md):
+//   * the model is PINNED to one fixed id for both arms of the A/B run;
+//   * "hooks": {} below is DELIBERATE — no learning-loop or
+//     prompt-logging hooks, so attempt n cannot learn from attempt n-1;
+//   * autoGenerateMemories is off for the same reason;
+//   * conservative cascade: nothing runs in the background or fetches
+//     from the network mid-attempt.
+//
+// OPERATOR TODO: "swe-pinned" is a placeholder, not a shipped model —
+// set the real pinned model id in this file, in User/settings.json and
+// in profile.json before running with --apply.
+{
+  "models": {
+    "defaultModel": "swe-pinned",
+    "secondaryModel": "swe-pinned",
+    "heavyModel": "swe-pinned",
+    "disabledModels": []
+  },
+  "cascadeRules": [],
+  "workflows": [],
+  "cascade": {
+    "allowBackground": false,
+    "autoExecution": "disabled",
+    "autoWebRequests": "disabled",
+    "autoContinue": false,
+    "autoGenerateMemories": false,
+    "autoOpenEditedFiles": true,
+    "autoFixLints": false,
+    "disableFastContextAgent": false,
+    "enableCascade": true,
+    "enableCascadeWebTools": false,
+    "gitignoreAccess": true,
+    "windsurfPreview": false,
+    "completionNotifications": true,
+    "alwaysNotifyOnCompletion": false
+  },
+  "agents": {
+    "enableACP": true,
+    "devinLocal": true,
+    "devinCloud": false
+  },
+  "devinForTerminal": { "allow": [], "deny": [], "ask": [] },
+  // Empty on purpose: learning-loop and prompt-logging hooks stay off so
+  // every attempt is independent. Do not add hooks here for A/B runs.
+  "hooks": {}
+}
