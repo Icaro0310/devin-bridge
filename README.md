@@ -41,6 +41,8 @@ Live demo page (static sample data): [icaro0310.github.io/demos/devin-office.htm
 
 An optional `OFFICE_ECO_URL` can supply a separate ecosystem-status JSON payload.
 There is no default dependency on another dashboard or maintainer service.
+Scheduled one-shot jobs in that payload (e.g. `cron_restart` entries that sit
+`stopped` between runs) render with a ⏰ marker and count as healthy, not down.
 
 ### SwapFile Queue
 

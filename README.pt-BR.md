@@ -42,7 +42,9 @@ Demo ao vivo (dados de exemplo): [icaro0310.github.io/demos/devin-office.html](h
 
 `OFFICE_ECO_URL` pode fornecer opcionalmente um JSON de status de outro
 sistema. Por padrão, não há dependência de outro dashboard ou serviço do
-maintainer.
+maintainer. Jobs agendados de execução única nesse payload (por exemplo
+entradas `cron_restart` paradas entre corridas) aparecem com marcador ⏰ e
+contam como saudáveis, não como down.
 
 ### SwapFile Queue
 
