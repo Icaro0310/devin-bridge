@@ -42,6 +42,21 @@
   #legend{position:fixed;bottom:12px;left:20px;font-size:10.5px;color:var(--dim);z-index:5}
   .lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 0 14px;vertical-align:middle}
   .lg.g{background:var(--green)} .lg.b{background:#7ee787} .lg.r{background:var(--red)}
+  /* ---- SwapFile Queue panel ---- */
+  #swapq{position:fixed;right:20px;bottom:12px;z-index:5;width:230px;
+    background:var(--chip);border:1px solid var(--chip-line);border-radius:10px;
+    padding:10px 12px;font-size:10.5px;color:var(--dim);display:none}
+  #swapq .t{font-size:9.5px;letter-spacing:1.2px;color:var(--txt);font-weight:700;margin-bottom:4px}
+  #swapq .bar{height:6px;background:#10141d;border-radius:3px;overflow:hidden;margin:2px 0 6px}
+  #swapq .bar i{display:block;height:100%;background:var(--green);transition:width .6s}
+  #swapq .bar.warn i{background:var(--amber)} #swapq .bar.crit i{background:var(--red)}
+  #swapq .q{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+  #swapq .q .n{color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #swapq .q .v{flex-shrink:0}
+  #swapq .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--green);margin-right:5px;vertical-align:middle}
+  #swapq .io{margin-top:6px;font-size:9.5px;border-top:1px solid var(--trace);padding-top:5px}
+  #swapq .empty{margin-top:2px;font-style:italic}
 </style>
 </head>
 <body>
@@ -55,6 +70,7 @@
   <span class="lg r"></span>down
   <span class="lg b"></span>subagent (dynamic arm)
 </div>
+<div id="swapq"></div>
 <script>
 const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
 const $=id=>document.getElementById(id);
@@ -209,6 +225,26 @@ function agentLabels(state){
   }
   return [...new Set(labels)].slice(0,8);
 }
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmtKB(kb){return kb>=1048576?(kb/1048576).toFixed(1)+"G":Math.max(1,Math.round(kb/1024))+"M"}
+// ---------- SwapFile Queue ----------
+function renderSwap(sw){
+  const box=$("swapq");
+  if(!sw||!sw.total_kb){box.style.display="none";return;}
+  box.style.display="block";
+  const pct=Math.min(100,Math.round(100*sw.used_kb/sw.total_kb));
+  const cls=pct>=80?"crit":pct>=50?"warn":"";
+  let html=`<div class="t">SWAPFILE QUEUE · ${fmtKB(sw.used_kb)} / ${fmtKB(sw.total_kb)}</div>`+
+    `<div class="bar ${cls}"><i style="width:${pct}%"></i></div>`;
+  const q=sw.queue||[];
+  if(!q.length)html+=`<div class="empty">queue empty — nothing parked in swap</div>`;
+  for(const p of q.slice(0,8))
+    html+=`<div class="q"><span class="n">${p.shielded?'<span class="dot"></span>':""}${esc(p.name)}</span>`+
+      `<span class="v">${fmtKB(p.swap_kb)}</span></div>`;
+  html+=`<div class="io">in ${fmtKB(sw.in_kbps||0)}/s · out ${fmtKB(sw.out_kbps||0)}/s`+
+    ` · mem avail ${fmtKB(sw.mem_avail_kb||0)}</div>`;
+  box.innerHTML=html;
+}
 function updateStat(){
   const sessions=(LAST_STATE.agents||[]).length;
   const services=Object.keys(LAST_STATE.services||{}).length;
@@ -221,6 +257,7 @@ function applyState(state){
   LAST=agentLabels(LAST_STATE);
   syncAgents(LAST);
   updateStat();
+  renderSwap(LAST_STATE.swap);
 }
 function applyEco(eco){
   const rows=toolRows(eco);

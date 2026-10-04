@@ -17,6 +17,9 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from swapmon import collect_swap  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent
 
 # Devin stores: Windows → %APPDATA%\devin (data) + %APPDATA%\Devin (config);
@@ -386,6 +389,7 @@ def collect_state() -> dict:
         })
 
     db.close()
+    state["swap"] = collect_swap()
     return state
 
 

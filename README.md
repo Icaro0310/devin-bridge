@@ -37,9 +37,18 @@ Live demo page (static sample data): [icaro0310.github.io/demos/devin-office.htm
 | `hub.py` | Serves the dashboard, receives probe state, and exposes health/state endpoints. It binds to loopback by default. |
 | `executor.py` | Optional ACP control process for message/spawn/kill requests. Requires an authenticated Devin CLI and explicit opt-in. |
 | `index.html` | Self-contained SVG dashboard; no JavaScript/CSS build step. |
+| `swapmon.py` | SwapFile Queue collector (Linux `/proc`, read-only): swap totals, page-in/out rates and the per-process swap queue. |
 
 An optional `OFFICE_ECO_URL` can supply a separate ecosystem-status JSON payload.
 There is no default dependency on another dashboard or maintainer service.
+
+### SwapFile Queue
+
+On Linux, the dashboard shows a live **SwapFile Queue** panel (bottom-right):
+swap used/total, page-in/out rates in kB/s, and the processes with the most
+memory parked in swap, ranked by `VmSwap`. Processes that are OOM-immune
+(`oom_score_adj <= -900`) are marked with a green dot. The panel hides itself
+on hosts without `/proc` (e.g. Windows).
 
 ## Requirements
 
