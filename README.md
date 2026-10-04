@@ -125,6 +125,11 @@ cp devin-orchestrator/.devin/rules/background-workers.md .devin/rules/
 
 The rule is always-on; the skill is model-triggered.
 
+
+`record`/`history` (OR-3) keep a **local** log of plans vs. outcomes in
+`plans.jsonl` — plan hash, worker count, mode, outcome, notes. It is a
+registry, not telemetry: nothing leaves the machine.
+
 ## Limitations
 
 The CLI only computes a JSON plan; it does not spawn workers or modify files.

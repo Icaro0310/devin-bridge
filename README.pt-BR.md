@@ -89,6 +89,11 @@ cp devin-orchestrator/.devin/rules/background-workers.md .devin/rules/
 
 A regra é always-on; a skill é acionada pelo modelo.
 
+
+`record`/`history` (OR-3) mantêm um registo **local** de planos vs.
+desfechos em `plans.jsonl` — hash do plano, nº de workers, modo, desfecho,
+notas. É um registo, não telemetria: nada sai da máquina.
+
 ## Limitações
 
 O CLI apenas devolve um plano JSON; não cria workers nem modifica ficheiros.

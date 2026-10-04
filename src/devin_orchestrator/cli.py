@@ -9,6 +9,7 @@ from importlib.resources import files
 from pathlib import Path
 
 from devin_orchestrator.planner import plan_task, plan_task_json
+from devin_orchestrator import registry as plan_registry
 
 SCHEMA_NAMES = ("spec", "plan")
 
@@ -53,6 +54,22 @@ def main(argv: list[str] | None = None) -> int:
     schema_p = sub.add_parser(
         "schema", help="print the JSON Schema for the spec or the plan")
     schema_p.add_argument("name", choices=SCHEMA_NAMES)
+    rec_p = sub.add_parser(
+        "record",
+        help="OR-3: append a plan's outcome to the local plans.jsonl "
+        "registry (local only — not telemetry)")
+    rec_p.add_argument("plan", help="the plan JSON to record against")
+    rec_p.add_argument("--outcome", required=True,
+                       choices=plan_registry.OUTCOMES)
+    rec_p.add_argument("--notes", default="")
+    rec_p.add_argument("--registry", type=Path,
+                       help="override plans.jsonl location")
+    hist_p = sub.add_parser(
+        "history",
+        help="read the local plan registry (counts + records)")
+    hist_p.add_argument("--registry", type=Path,
+                        help="override plans.jsonl location")
+    hist_p.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
 
     if args.command == "schema":
@@ -62,6 +79,31 @@ def main(argv: list[str] | None = None) -> int:
         text = files("devin_orchestrator").joinpath(name).read_text(
             encoding="utf-8")
         print(text, end="" if text.endswith("\n") else "\n")
+        return 0
+
+    if args.command == "record":
+        reg = args.registry or plan_registry.default_registry_path()
+        try:
+            plan = json.loads(args.plan)
+            rec = plan_registry.record(reg, plan, args.outcome, args.notes)
+        except (ValueError, json.JSONDecodeError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
+        print(json.dumps(rec.to_dict()))
+        return 0
+
+    if args.command == "history":
+        reg = args.registry or plan_registry.default_registry_path()
+        summary = plan_registry.summarize(reg)
+        if args.json:
+            summary["records"] = list(plan_registry.iter_records(reg))
+            print(json.dumps(summary, indent=2))
+        else:
+            print(f"{summary['total']} recorded plan(s): "
+                  + ", ".join(f"{k}={v}" for k, v in
+                              sorted(summary["by_outcome"].items())
+                              ) if summary["by_outcome"] else "none")
+            print(f"({summary['note']})")
         return 0
 
     raw = args.spec if args.spec is not None else args.spec_file.read_text(

@@ -37,3 +37,30 @@ def test_plan_explain_and_schema(capsys):
     assert main(["schema", "spec"]) == 0
     import json as j
     assert "task spec" in j.loads(capsys.readouterr().out)["title"]
+
+
+def test_record_and_history(tmp_path, capsys):
+    reg = tmp_path / "plans.jsonl"
+    assert main(["record", '{"workers":[1,2],"mode":"parallel"}',
+                 "--outcome", "success", "--registry", str(reg)]) == 0
+    assert main(["record", '{"workers":[1]}',
+                 "--outcome", "failed", "--registry", str(reg)]) == 0
+    capsys.readouterr()
+    assert main(["history", "--registry", str(reg), "--json"]) == 0
+    import json
+    out = json.loads(capsys.readouterr().out)
+    assert out["total"] == 2
+    assert out["by_outcome"] == {"success": 1, "failed": 1}
+    assert "nothing leaves the machine" in out["note"]
+
+
+def test_record_bad_outcome(tmp_path, capsys):
+    import pytest
+    with pytest.raises(SystemExit):  # argparse rejects invalid choices
+        main(["record", "{}", "--outcome", "bogus",
+              "--registry", str(tmp_path / "p.jsonl")])
+
+
+def test_history_empty(tmp_path, capsys):
+    assert main(["history", "--registry", str(tmp_path / "nope.jsonl")]) == 0
+    assert "none" in capsys.readouterr().out
