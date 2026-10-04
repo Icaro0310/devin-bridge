@@ -101,6 +101,14 @@ devin-bridge policy --check terminal "rm -rf /"
 Policy `ask` decisions prompt the operator interactively on a TTY;
 non-interactive runs stay fail-closed unless `--yes` is passed.
 
+Named presets (`--preset`, or `policy --init --preset <name>`):
+
+- `ask` — the shipped fail-closed default; everything requires approval.
+- `read-only` — denies terminal/fsWrite/network; reads stay open except
+  credential files. For intake and automation that must observe, not act.
+- `full` — allows everything. **High risk** — trusted scratch environments
+  only; the CLI warns every time it is selected.
+
 ## Works with Devin alone (Devin-only mode)
 
 devin-bridge *is* the Devin-only path: it drives `devin acp` directly using

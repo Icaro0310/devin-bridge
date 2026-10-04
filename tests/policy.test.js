@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import fs from "node:fs";
 
-import { Policy, globToRegExp, normalizeFsPath, defaultPolicy, examplePolicyDoc } from "../src/policy.js";
+import { Policy, globToRegExp, normalizeFsPath, defaultPolicy, examplePolicyDoc, presetPolicyDoc } from "../src/policy.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES = HERE + "/fixtures";
@@ -226,4 +226,33 @@ describe("Policy — loading and defaults", () => {
     );
     assert.deepEqual(onDisk, examplePolicyDoc());
   });
+});
+
+describe("policy presets (BR-2)", () => {
+it("presets: read-only denies writes/terminal/network, allows reads", () => {
+  const p = new Policy(presetPolicyDoc("read-only"), { root: "/repo" });
+  assert.equal(p.checkFsRead("src/index.js"), "allow");
+  assert.equal(p.checkFsRead(".env"), "deny");          // preset deny list
+  assert.equal(p.checkFsWrite("src/index.js"), "deny");
+  assert.equal(p.checkTerminal("git status"), "deny");
+  assert.equal(p.checkNetwork("api.github.com"), "deny");
+});
+
+it("presets: full allows everything", () => {
+  const p = new Policy(presetPolicyDoc("full"), { root: "/repo" });
+  assert.equal(p.checkFsWrite("src/x.js"), "allow");
+  assert.equal(p.checkTerminal("rm -rf /tmp/x"), "allow");
+  // credential-store reads are still denied (builtin)
+  assert.equal(p.checkFsRead("credentials.toml"), "deny");
+});
+
+it("presets: ask = shipped fail-closed default", () => {
+  const p = new Policy(presetPolicyDoc("ask"), { root: "/repo" });
+  assert.equal(p.checkTerminal("ls"), "ask");
+  assert.equal(p.checkFsRead("x"), "ask");
+});
+
+it("presets: unknown preset throws", () => {
+  assert.throws(() => presetPolicyDoc("yolo"), /unknown preset/);
+});
 });

@@ -101,6 +101,14 @@ devin-bridge policy --check terminal "rm -rf /"
 Decisões `ask` perguntam ao operador num TTY; em execuções não-interativas,
 ficam negadas por omissão a menos que `--yes` seja passado.
 
+Presets nomeados (`--preset`, ou `policy --init --preset <nome>`):
+
+- `ask` — o padrão fail-closed; tudo exige aprovação.
+- `read-only` — nega terminal/fsWrite/network; leituras ficam abertas exceto
+  ficheiros de credenciais. Para intake e automação que só observa.
+- `full` — permite tudo. **Risco alto** — só ambientes descartáveis de
+  confiança; o CLI avisa sempre que é selecionado.
+
 ## Funciona só com o Devin (modo Devin-only)
 
 O devin-bridge *é* o caminho Devin-only: fala diretamente com `devin acp`

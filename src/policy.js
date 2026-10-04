@@ -272,6 +272,52 @@ export function defaultPolicy(opts) {
   return Policy.default(opts);
 }
 
+/**
+ * Named presets (BR-2). `ask` is the shipped fail-closed default;
+ * `read-only` is for intake/automation where the agent must observe but
+ * never act; `full` exists for trusted scratch environments only — it is
+ * labelled high-risk and prints a warning whenever it is selected.
+ */
+export const POLICY_PRESETS = Object.freeze(["ask", "read-only", "full"]);
+
+export function presetPolicyDoc(name) {
+  if (name === "ask") return { version: 1 };
+  if (name === "read-only") {
+    return {
+      version: 1,
+      defaults: {
+        terminal: "deny",
+        fsRead: "allow",
+        fsWrite: "deny",
+        network: "deny",
+        permission: "deny",
+      },
+      fs: {
+        read: {
+          allow: ["**"],
+          deny: ["**/.env", "**/.env.*", "**/credentials*",
+                 "**/*.pem", "**/*.key", "**/id_rsa*"],
+        },
+      },
+    };
+  }
+  if (name === "full") {
+    return {
+      version: 1,
+      defaults: {
+        terminal: "allow",
+        fsRead: "allow",
+        fsWrite: "allow",
+        network: "allow",
+        permission: "allow",
+      },
+    };
+  }
+  throw new Error(
+    `unknown preset: ${name} (expected ${POLICY_PRESETS.join("|")})`
+  );
+}
+
 /** The example policy shipped as policy.example.json. */
 export function examplePolicyDoc() {
   return {

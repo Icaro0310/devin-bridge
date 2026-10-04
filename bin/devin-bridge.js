@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
 import { DevinAcp } from "../src/acp-client.js";
-import { Policy, examplePolicyDoc } from "../src/policy.js";
+import { Policy, examplePolicyDoc, presetPolicyDoc } from "../src/policy.js";
 import { SessionMap, ensureSession, runTask } from "../src/dispatch.js";
 
 const CAPS = ["terminal", "fsRead", "fsWrite", "network"];
@@ -51,10 +51,15 @@ Commands:
   prompt <repo-dir> <text>          send a prompt (or --file <f>), stream the reply
   sessions [--json]                 list repo -> session mappings
   policy --show                     print the effective policy
-  policy --init [--force]           write ./policy.json with documented defaults
+  policy --init [--force] [--preset ask|read-only|full]
+                                    write ./policy.json (preset or documented defaults)
   policy --check <cap> <target>     decision for terminal|fsRead|fsWrite|network
 
-Options: --sessions-file f --policy f --bin path --timeout-ms n --yes --help`);
+Options: --sessions-file f --policy f --preset ask|read-only|full
+         --bin path --timeout-ms n --yes --help
+
+Presets: read-only denies terminal/fsWrite/network (observe-only intake);
+full allows everything — HIGH RISK, trusted scratch environments only.`);
   process.exit(exitCode);
 }
 
@@ -63,6 +68,13 @@ function loadPolicy(opts) {
   if (file) {
     console.error(`[policy] ${path.resolve(file)}`);
     return Policy.load(file, { root: process.cwd() });
+  }
+  if (opts.preset) {
+    if (opts.preset === "full") {
+      console.error("[policy] WARNING: preset 'full' allows everything — trusted environments only");
+    }
+    console.error(`[policy] preset ${opts.preset}`);
+    return new Policy(presetPolicyDoc(opts.preset), { root: process.cwd() });
   }
   console.error("[policy] built-in default (everything requires asking)");
   return Policy.default();
@@ -189,8 +201,9 @@ const CMDS = {
       if (fs.existsSync(file) && !opts.force) {
         throw new Error(`${file} already exists (use --force to overwrite)`);
       }
-      fs.writeFileSync(file, JSON.stringify(examplePolicyDoc(), null, 2) + "\n");
-      return console.log(`wrote ${path.resolve(file)}`);
+      const doc = opts.preset ? presetPolicyDoc(opts.preset) : examplePolicyDoc();
+      fs.writeFileSync(file, JSON.stringify(doc, null, 2) + "\n");
+      return console.log(`wrote ${path.resolve(file)}${opts.preset ? ` (preset: ${opts.preset})` : ""}`);
     }
     if (opts.check !== undefined) {
       const [cap, target] = [opts.check === true ? opts._[0] : opts.check,
