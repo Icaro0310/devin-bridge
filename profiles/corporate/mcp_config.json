@@ -1,0 +1,15 @@
+// Corporate MCP overlay — remote servers only, reached through the
+// company gateway. No local server processes, no tokens in this file.
+{
+  "mcpServers": {
+    "corp-gateway": {
+      "url": "https://mcp.corp.example.com/gateway",
+      "env": {}
+    },
+    "corp-search": {
+      "url": "https://mcp.corp.example.com/search",
+      "env": {},
+      "disabled": false
+    }
+  }
+}

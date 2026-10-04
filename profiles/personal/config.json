@@ -1,0 +1,82 @@
+// Personal overlay for the Devin data-dir config.json.
+// Permissive: background agents allowed, read-only actions auto-approved.
+{
+  "models": {
+    "defaultModel": "SWE-L15",
+    "secondaryModel": "SWE-16-Fast",
+    "heavyModel": "SWE-2-High",
+    "disabledModels": []
+  },
+  "cascadeRules": [
+    {
+      "name": "Auto-allow File Reads",
+      "description": "Read-only file access does not ask.",
+      "pattern": "file.read",
+      "action": "allow"
+    }
+  ],
+  "workflows": [],
+  "cascade": {
+    "allowBackground": true,
+    "autoExecution": "enabled",
+    "autoWebRequests": "enabled",
+    "autoContinue": true,
+    "autoGenerateMemories": true,
+    "autoOpenEditedFiles": true,
+    "autoFixLints": true,
+    "disableFastContextAgent": false,
+    "enableCascade": true,
+    "enableCascadeWebTools": true,
+    "gitignoreAccess": true,
+    "windsurfPreview": true,
+    "completionNotifications": true,
+    "alwaysNotifyOnCompletion": true
+  },
+  "agents": {
+    "enableACP": true,
+    "devinLocal": true,
+    "devinCloud": false
+  },
+  "devinForTerminal": {
+    "allow": ["git status", "git diff", "ls"],
+    "deny": ["rm -rf /"],
+    "ask": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/bin/devin-hooks/session-start.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/bin/devin-hooks/session-end.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Prefer concrete, verified answers over speculation."
+          }
+        ]
+      }
+    ]
+  }
+}
