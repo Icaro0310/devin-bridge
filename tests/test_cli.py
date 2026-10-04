@@ -27,3 +27,13 @@ def test_plan_from_file(tmp_path, capsys):
 def test_bad_spec_returns_2(capsys):
     assert main(["plan", "{bad"]) == 2
     assert "error:" in capsys.readouterr().err
+
+
+def test_plan_explain_and_schema(capsys):
+    from devin_orchestrator.cli import main
+    assert main(["plan", '{"kind":"question"}', "--explain"]) == 0
+    out = capsys.readouterr().out
+    assert "0 worker(s)" in out and "inline" in out
+    assert main(["schema", "spec"]) == 0
+    import json as j
+    assert "task spec" in j.loads(capsys.readouterr().out)["title"]

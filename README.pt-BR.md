@@ -46,6 +46,21 @@ comandos; o planner não cria repositórios nem toca o filesystem.
 devin-orchestrator plan '{"kind":"implementation","independent_units":3,"needs_write":true,"estimated_scope":"large","summary":"API + UI + testes"}'
 ```
 
+
+### `--explain` e disjunção de ficheiros
+
+```bash
+devin-orchestrator plan '<spec>' --explain   # explica a decisão em texto
+devin-orchestrator schema spec|plan          # imprime os JSON Schemas publicados
+```
+
+Um spec pode declarar os ficheiros de cada unidade para o planner sinalizar
+unidades **não disjuntas** antes de lançar workers (`file_collisions` no
+plano + warning). O check é puramente declarativo — o planner nunca lê o
+sistema de ficheiros. Nota de packaging: o nome `devin-orchestrator` no PyPI
+é de outro autor — este projeto publica como `devin-fanout`; o CLI continua
+`devin-orchestrator`.
+
 ## Instalação num workspace
 
 Clone o repositório para copiar os ficheiros de extensão do Devin:

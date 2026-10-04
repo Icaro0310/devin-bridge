@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Icaro0310/devin-orchestrator/plan.schema.json",
+  "title": "devin-orchestrator worker plan",
+  "type": "object",
+  "required": ["workers", "mode", "profiles", "rationale", "collect", "nesting_blocked", "warnings", "limits"],
+  "properties": {
+    "workers": {"type": "integer", "minimum": 0},
+    "mode": {"type": "string", "enum": ["none", "background"]},
+    "profiles": {"type": "array", "items": {"type": "string"}},
+    "rationale": {"type": "string"},
+    "collect": {"type": "boolean"},
+    "nesting_blocked": {"type": "boolean"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "file_collisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["units", "path"],
+        "properties": {
+          "units": {"type": "array", "items": {"type": "string"}, "minItems": 2},
+          "path": {"type": "string"}
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": ["max_workers", "nesting"],
+      "properties": {
+        "max_workers": {"type": "integer"},
+        "nesting": {"type": "string"}
+      }
+    }
+  }
+}

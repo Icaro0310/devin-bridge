@@ -41,6 +41,33 @@ Every fanned-out plan carries `collect=true`: the parent must gather worker
 results before reporting. The plan is data only — no paths, no URLs, no
 commands; the planner cannot create repos or touch the filesystem.
 
+
+### `--explain` and file disjointness
+
+```bash
+devin-orchestrator plan '<spec>' --explain   # human-readable decision walkthrough
+devin-orchestrator schema spec|plan          # print the published JSON Schemas
+```
+
+A spec may declare per-unit files so the planner can flag units that are
+**not** disjoint before workers are launched:
+
+```json
+{"kind":"implementation","independent_units":2,"estimated_scope":"medium",
+ "units_detail":[{"id":"api","files":["src/api/"]},
+                 {"id":"ui","files":["src/ui/","src/api/x.py"]}]}
+```
+
+Collisions appear under `file_collisions` in the plan plus a warning — the
+check is purely declarative (the planner never reads the filesystem). The
+input spec and output plan are published as JSON Schemas
+(`spec.schema.json`, `plan.schema.json`, also via `devin-orchestrator
+schema`).
+
+Note on packaging: the PyPI name `devin-orchestrator` belongs to another
+author — this project ships as `devin-fanout` while the CLI stays
+`devin-orchestrator`.
+
 ## Install
 
 Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx` with `py -m pip install --user pipx`, run `py -m pipx ensurepath`, then reopen the terminal. **Linux (Debian/Ubuntu):** run `sudo apt install pipx python3-venv` and `pipx ensurepath`; reopen the terminal. Other Linux distributions should install `pipx` using their package manager.

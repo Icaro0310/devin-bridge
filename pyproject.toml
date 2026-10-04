@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "devin-orchestrator"
+name = "devin-fanout"  # dist name: "devin-orchestrator" is taken on PyPI
 version = "0.2.0"
 description = "Background-worker fan-out policy for Devin Desktop — deterministic planner enforcing worker caps, no nesting, and collect-before-report."
 readme = "README.md"
@@ -20,6 +20,9 @@ devin-orchestrator = "devin_orchestrator.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+devin_orchestrator = ["*.schema.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

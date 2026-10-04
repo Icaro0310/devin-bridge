@@ -44,9 +44,10 @@ class WorkerPlan:
     collect: bool = False  # parent must gather results before reporting
     nesting_blocked: bool = False
     warnings: list[str] = field(default_factory=list)
+    file_collisions: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        out = {
             "workers": self.workers,
             "mode": self.mode,
             "profiles": self.profiles,
@@ -56,6 +57,9 @@ class WorkerPlan:
             "warnings": self.warnings,
             "limits": {"max_workers": MAX_WORKERS, "nesting": "forbidden"},
         }
+        if self.file_collisions:
+            out["file_collisions"] = self.file_collisions
+        return out
 
 
 def _max_workers(env: dict[str, str] | None = None) -> int:
@@ -86,13 +90,62 @@ def _normalise_spec(spec: dict[str, Any]) -> dict[str, Any]:
     units = spec.get("independent_units", 1)
     if not isinstance(units, int) or isinstance(units, bool) or units < 0:
         raise ValueError("independent_units must be a non-negative integer")
+    detail = spec.get("units_detail")
+    if detail is not None:
+        if not isinstance(detail, list) or not all(
+            isinstance(u, dict) and isinstance(u.get("id"), str) and u["id"]
+            for u in detail
+        ):
+            raise ValueError(
+                "units_detail must be a list of objects with a non-empty 'id'")
+        for u in detail:
+            files = u.get("files", [])
+            if not isinstance(files, list) or not all(
+                isinstance(f, str) and f for f in files
+            ):
+                raise ValueError(
+                    "units_detail[].files must be a list of non-empty strings")
     return {
         "kind": kind,
         "estimated_scope": scope,
         "independent_units": units,
         "needs_write": bool(spec.get("needs_write", True)),
         "summary": str(spec.get("summary", ""))[:200],
+        "units_detail": detail,
     }
+
+
+def _norm_path(p: str) -> str:
+    """Declared paths normalize to forward slashes; never resolved on disk."""
+    return p.replace("\\", "/").strip("/")
+
+
+def _paths_overlap(a: str, b: str) -> bool:
+    return a == b or a.startswith(b + "/") or b.startswith(a + "/")
+
+
+def file_collisions(units_detail: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    """Static disjointness check over declared unit file lists (OR-4).
+
+    Pure declaration checking — the planner never touches the filesystem.
+    Two paths collide when equal or when one is a directory prefix of the
+    other. ``files`` absent on a unit means the unit declares no paths.
+    """
+    if not units_detail:
+        return []
+    out: list[dict[str, Any]] = []
+    for i in range(len(units_detail)):
+        for j in range(i + 1, len(units_detail)):
+            ui, uj = units_detail[i], units_detail[j]
+            for fa in ui.get("files", []):
+                for fb in uj.get("files", []):
+                    na, nb = _norm_path(fa), _norm_path(fb)
+                    if _paths_overlap(na, nb):
+                        out.append({
+                            "units": [ui["id"], uj["id"]],
+                            "path": na if len(na) <= len(nb) else nb,
+                        })
+    return out
 
 
 def plan_task(spec: dict[str, Any], env: dict[str, str] | None = None) -> WorkerPlan:
@@ -158,6 +211,17 @@ def plan_task(spec: dict[str, Any], env: dict[str, str] | None = None) -> Worker
         warnings.append("review/research tasks should set needs_write=false")
         profile = DEFAULT_READ_PROFILE
 
+    collisions = file_collisions(task["units_detail"])
+    if collisions:
+        pair_ids = {
+            tuple(sorted(c["units"])) for c in collisions
+        }
+        warnings.append(
+            f"{len(collisions)} file collision(s) across "
+            f"{len(pair_ids)} unit pair(s) — units are NOT disjoint; "
+            "see file_collisions"
+        )
+
     return WorkerPlan(
         workers=count,
         mode="background",
@@ -165,6 +229,7 @@ def plan_task(spec: dict[str, Any], env: dict[str, str] | None = None) -> Worker
         rationale=rationale,
         collect=True,
         warnings=warnings,
+        file_collisions=collisions,
     )
 
 

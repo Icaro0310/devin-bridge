@@ -121,3 +121,67 @@ def test_invalid_specs_rejected():
         plan_task({"kind": "implementation", "estimated_scope": "huge"})
     with pytest.raises(ValueError):
         plan_task_json("{invalid json")
+
+
+# -- OR-1/OR-2/OR-4: schemas, explain, file disjointness --------------------
+
+
+def test_units_detail_collision_detected():
+    plan = plan_task({
+        "kind": "implementation",
+        "independent_units": 2,
+        "estimated_scope": "medium",
+        "units_detail": [
+            {"id": "api", "files": ["src/api/x.py", "src/api/"]},
+            {"id": "ui", "files": ["src/api/x.py", "src/ui/"]},
+        ],
+    })
+    assert plan.file_collisions
+    assert plan.file_collisions[0]["units"] == ["api", "ui"]
+    assert any("collision" in w for w in plan.warnings)
+
+
+def test_units_detail_disjoint_clean():
+    plan = plan_task({
+        "kind": "implementation",
+        "independent_units": 2,
+        "estimated_scope": "medium",
+        "units_detail": [
+            {"id": "api", "files": ["src/api/"]},
+            {"id": "ui", "files": ["src/ui/"]},
+        ],
+    })
+    assert plan.file_collisions == []
+    assert not any("collision" in w for w in plan.warnings)
+
+
+def test_units_detail_dir_prefix_collision():
+    plan = plan_task({
+        "kind": "implementation",
+        "independent_units": 2,
+        "estimated_scope": "medium",
+        "units_detail": [
+            {"id": "a", "files": ["src/"]},
+            {"id": "b", "files": ["src/deep/file.py"]},
+        ],
+    })
+    assert plan.file_collisions == [{"units": ["a", "b"], "path": "src"}]
+
+
+def test_units_detail_validation():
+    import pytest
+    with pytest.raises(ValueError):
+        plan_task({"units_detail": [{"files": ["x"]}]})  # missing id
+    with pytest.raises(ValueError):
+        plan_task({"units_detail": [{"id": "a", "files": "x.py"}]})
+
+
+def test_schemas_shipped_and_loadable():
+    from importlib.resources import files
+    import json
+    spec = json.loads(
+        files("devin_orchestrator").joinpath("spec.schema.json").read_text())
+    plan = json.loads(
+        files("devin_orchestrator").joinpath("plan.schema.json").read_text())
+    assert "units_detail" in spec["properties"]
+    assert "file_collisions" in plan["properties"]
