@@ -1,9 +1,9 @@
 {
   "description": "G3 A/B evaluation lab: pinned model, empty hooks, empty MCP set — hermetic attempts labelled g3-ab.",
-  "model": "swe-pinned",
-  "devin_version_note": "Placeholder model id. The operator must set the real pinned model in config.json, User/settings.json and this field before --apply, and keep the same Devin build across both arms of the run.",
+  "model": "SWE-2-High",
+  "devin_version_note": "Model pinned to SWE-2-High (free tier, 2026-10-04) in config.json, User/settings.json and this field. Keep the same Devin build and model id across both arms of a run; if the free model rotates, update the three files together.",
   "notes": [
-    "Placeholder 'swe-pinned' — replace with the real pinned model id in config.json and User/settings.json before applying.",
+    "Model pinned to SWE-2-High (free tier as of 2026-10-04) — the three files must always carry the same id.",
     "hooks and mcpServers are empty ON PURPOSE: learning-loop/prompt-logging hooks and the memory MCP would let attempt n learn from attempt n-1.",
     "cascade.autoGenerateMemories is also off — no implicit cross-attempt memory.",
     "Open question ([confirmar] in the G3 design): if Devin cannot isolate the config dir per workspace, run A/B attempts SERIALLY and swap profiles with devin-switch between them.",

@@ -2,7 +2,7 @@
     "devin.acp.agentPreferences": {
         "devin-cli": {
             "mode": "bypass",
-            "model": "swe-pinned"
+            "model": "SWE-2-High"
         }
     },
     "devin.autoContinue": 0,

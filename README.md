@@ -97,8 +97,8 @@ comments allowed, trailing commas not.
 ### The `lab` profile (G3 A/B runs)
 
 `profiles/lab/` is a hermetic config for A/B skill evaluation: a pinned
-model (`swe-pinned` is a placeholder — set the real id in `config.json`,
-`User/settings.json` and `profile.json` before `--apply`), **no hooks
+model — `SWE-2-High` (free tier as of 2026-10-04), the same id in
+`config.json`, `User/settings.json` and `profile.json`, **no hooks
 and no MCP servers at all** — deliberate, since learning-loop /
 prompt-logging hooks and the memory MCP would let attempt n learn from
 attempt n-1 — plus `autoGenerateMemories` off. Label sessions `g3-ab`.

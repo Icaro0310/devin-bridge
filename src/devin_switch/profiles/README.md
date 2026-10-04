@@ -40,9 +40,8 @@ but their contents are withheld from every diff and `show` output.
 - `personal/` — permissive: local stdio MCP servers (memory, filesystem,
   obsidian), ACP enabled, a prompt hook plus session start/end hooks.
 - `lab/` — G3 A/B skill evaluation: the model is **pinned** to one fixed
-  id for both arms (`swe-pinned` is a placeholder — set the real id in
-  `config.json`, `User/settings.json` and `profile.json` before
-  `--apply`). `hooks` and `mcpServers` are **empty on purpose** — no
+  id for both arms — `SWE-2-High` (free tier as of 2026-10-04), the
+  same id in `config.json`, `User/settings.json` and `profile.json`. `hooks` and `mcpServers` are **empty on purpose** — no
   learning-loop or prompt-logging hooks and no memory MCP, so attempt n
   cannot learn from attempt n-1 (`autoGenerateMemories` is off too).
   Sessions are labelled `g3-ab`.

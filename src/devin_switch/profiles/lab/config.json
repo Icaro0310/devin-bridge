@@ -9,14 +9,15 @@
 //   * conservative cascade: nothing runs in the background or fetches
 //     from the network mid-attempt.
 //
-// OPERATOR TODO: "swe-pinned" is a placeholder, not a shipped model —
-// set the real pinned model id in this file, in User/settings.json and
-// in profile.json before running with --apply.
+// The model is pinned to SWE-2-High (the free-tier model at
+// 2026-10-04) — the SAME id in User/settings.json and profile.json.
+// If the free model rotates, update all three files together and keep
+// both arms of a run on the identical id.
 {
   "models": {
-    "defaultModel": "swe-pinned",
-    "secondaryModel": "swe-pinned",
-    "heavyModel": "swe-pinned",
+    "defaultModel": "SWE-2-High",
+    "secondaryModel": "SWE-2-High",
+    "heavyModel": "SWE-2-High",
     "disabledModels": []
   },
   "cascadeRules": [],

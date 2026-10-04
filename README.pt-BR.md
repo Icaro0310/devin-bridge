@@ -98,9 +98,8 @@ perfil traz é o que o arquivo vira. Os arquivos são JSONC: comentários
 ### O perfil `lab` (rodadas A/B do G3)
 
 `profiles/lab/` é uma config hermética para avaliação A/B de skills:
-modelo pinado (`swe-pinned` é placeholder — defina o id real em
-`config.json`, `User/settings.json` e `profile.json` antes do
-`--apply`), **sem hooks e sem nenhum servidor MCP** — deliberado, porque
+modelo pinado — `SWE-2-High` (tier free em 2026-10-04), o mesmo id
+em `config.json`, `User/settings.json` e `profile.json`, **sem hooks e sem nenhum servidor MCP** — deliberado, porque
 hooks de learning-loop / prompt-logging e o MCP de memória deixariam a
 tentativa n aprender com a n-1 — e `autoGenerateMemories` desligado.
 Rotule as sessões como `g3-ab`. Ressalva: ainda está em aberto se o

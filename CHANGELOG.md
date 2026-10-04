@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `profiles/lab/` — G3 A/B evaluation overlay: pinned model
-  (`swe-pinned` placeholder — set the real id before `--apply`),
+  (`SWE-2-High` — the free-tier model as of 2026-10-04),
   explicitly empty `hooks` and `mcpServers` (no learning-loop or
   prompt-logging hooks, no memory MCP, `autoGenerateMemories` off), and
   the serial-vs-isolated config-dir caveat documented in
