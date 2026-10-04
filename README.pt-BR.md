@@ -248,3 +248,11 @@ Devin Office.
 ---
 
 Se isso te poupou tempo de depuração, uma ⭐ no repositório ajuda outras pessoas a encontrá-lo.
+
+
+`procmap.py` (OF-1) atribui processos em execução a sessões Devin:
+`session_locks/*.lock` → PID dono → árvore `/proc` (+ RSS por filho) →
+`sessions.db`. Locks vivas vs mortas, `--dead-only`, `--json`. Só-leitura
+— nada é sinalizado ou morto; fora do Linux usa `tasklist`/`ps` com menos
+detalhe. A atribuição a tool calls é inferência por PID do lock + filhos
+(heurística); atribuição a contentores fica para o add-on `devin-wisp`.

@@ -256,3 +256,12 @@ Observation is read-only; the control endpoints are off by default and require
 ---
 
 If this saved you debugging time, a ⭐ on the repo helps others find it.
+
+
+`procmap.py` (OF-1) attributes running processes to Devin sessions:
+`session_locks/*.lock` → owner PID → `/proc` process tree (+ RSS per
+child) → `sessions.db`. Live vs dead locks, `--dead-only`, `--json`.
+Read-only — nothing is signalled or killed; off-Linux falls back to
+`tasklist`/`ps` with less detail. Tool-call attribution is lock-PID +
+children inference (heuristic); container-level attribution is the
+optional `devin-wisp` add-on.
