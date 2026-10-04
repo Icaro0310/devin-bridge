@@ -90,7 +90,9 @@ function toolRows(eco){
       }
     }
     for(const process of data.pm2||[]){
-      rows.push([`${host}-pm2-${process.name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${process.name}`,process.status==="online"]);
+      // job agendado (pm2 cron_restart) parado = estado esperado, não falha
+      const up=process.status==="online"||!!process.cron;
+      rows.push([`${host}-pm2-${process.name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${process.name}${process.cron?" ⏰":""}`,up]);
     }
   }
   return rows;
