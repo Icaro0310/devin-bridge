@@ -25,6 +25,7 @@
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import readline from "node:readline";
 import { DevinAcp } from "../src/acp-client.js";
@@ -33,6 +34,9 @@ import { SessionMap, ensureSession, runTask } from "../src/dispatch.js";
 import {
   LABELS_FILENAME, LabelStore, bridgeStateDir, parseLabel,
 } from "../src/labels.js";
+import {
+  mailboxDir, checkPermissions, parseTask, listInbox, moveTo,
+} from "../src/mailbox.js";
 
 const CAPS = ["terminal", "fsRead", "fsWrite", "network"];
 
@@ -62,6 +66,11 @@ Commands:
   policy --init [--force] [--preset ask|read-only|full]
                                     write ./policy.json (preset or documented defaults)
   policy --check <cap> <target>     decision for terminal|fsRead|fsWrite|network
+  probe [--no-session]              ACP compatibility probe: handshake, auth,
+                                    methods; --no-session skips session/new
+  intake [--dry-run] [--repo <dir>] process mailbox tasks: JSON files in
+                                    <state-dir>/mailbox/inbox/ (untrusted
+                                    input — policy still gates every step)
 
 Options: --sessions-file f --policy f --preset ask|read-only|full
          --bin path --timeout-ms n --yes --help
@@ -226,6 +235,97 @@ const CMDS = {
     for (const e of withLabels) {
       console.log(`${e.repo}\t${e.sessionId}\t${e.updatedAt}\t${e.cwd}\t${e.label || "-"}`);
     }
+  },
+
+  /** BR-1: ACP compatibility probe (foundation for drift checks). */
+  async probe(opts) {
+    const acp = makeClient(opts);
+    const report = { bin: acp.bin || null, checks: [] };
+    const mark = (name, ok, detail) =>
+      report.checks.push({ check: name, ok, ...(detail ? { detail } : {}) });
+    try {
+      const t0 = Date.now();
+      await acp.init();
+      mark("initialize+authenticate", true, `${Date.now() - t0}ms`);
+      if (!opts["no-session"]) {
+        // probe session in a temp dir, labelled so janitor can reap it
+        const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "devin-bridge-probe-"));
+        try {
+          const res = await acp.newSession(tmp, {
+            label: { origin: "bridge", purpose: "probe", label: "bridge:probe" },
+          });
+          mark("session/new", true);
+          report.sessionId = res.sessionId;
+          report.models = acp.listModels();
+          report.configOptions = acp.configOptions;
+          loadLabelStore(opts).record(res.sessionId, {
+            label: "bridge:probe", origin: "bridge", purpose: "probe", cwd: tmp,
+          }).save();
+        } catch (e) {
+          mark("session/new", false, e.message);
+        }
+      }
+    } catch (e) {
+      mark("initialize+authenticate", false, e.message);
+    } finally { acp.stop(); }
+    report.ok = report.checks.every((c) => c.ok);
+    console.log(JSON.stringify(report, null, 2));
+    if (!report.ok) process.exitCode = 1;
+  },
+
+  /** BR-3: file-based mailbox intake — no listener, untrusted input. */
+  async intake(opts) {
+    const stateDir = opts["state-dir"]
+      ? path.resolve(opts["state-dir"]) : bridgeStateDir();
+    const root = mailboxDir(stateDir);
+    checkPermissions(path.join(root, "inbox"));
+    const files = listInbox(root);
+    const store = loadLabelStore(opts);
+    const results = [];
+    for (const file of files) {
+      const name = path.basename(file);
+      const parsed = parseTask(file);
+      if (!parsed.ok) {
+        const dst = moveTo(root, file, "failed");
+        fs.writeFileSync(`${dst}.err`, parsed.error + "\n");
+        results.push({ file: name, status: "rejected", error: parsed.error });
+        continue;
+      }
+      const t = parsed.task;
+      const repoDir = t.repo || (opts.repo ? path.resolve(opts.repo) : process.cwd());
+      if (opts["dry-run"]) {
+        results.push({ file: name, status: "dry-run", repo: repoDir,
+          promptPreview: t.prompt.slice(0, 80) });
+        continue;
+      }
+      const work = moveTo(root, file, "processing");
+      const acp = makeClient(opts, { forPrompt: true });
+      try {
+        await acp.init();
+        const res = await runTask(acp, repoDir, {
+          promptText: t.prompt,
+          sessionsFile: opts["sessions-file"] || ".sessions.json",
+          timeoutMs: opts["timeout-ms"] ? Number(opts["timeout-ms"]) : 45 * 60 * 1000,
+          label: { origin: "mailbox", purpose: name.replace(/\.json$/, ""),
+            label: `mailbox:${name.replace(/\.json$/, "")}` },
+          labelStore: store,
+        });
+        if (t.model) await acp.setModel(t.model);
+        store.save();
+        const dst = moveTo(root, work, "done");
+        fs.writeFileSync(`${dst}.result.json`, JSON.stringify({
+          sessionId: res.sessionId, stopReason: res.stopReason,
+          cost: res.cost, timedOut: res.timedOut, text: res.text,
+        }, null, 2) + "\n");
+        results.push({ file: name, status: "done", sessionId: res.sessionId,
+          stopReason: res.stopReason });
+      } catch (e) {
+        const dst = moveTo(root, work, "failed");
+        fs.writeFileSync(`${dst}.err`, String(e.message) + "\n");
+        results.push({ file: name, status: "failed", error: e.message });
+      } finally { acp.stop(); }
+    }
+    console.log(JSON.stringify({ mailbox: root, results }, null, 2));
   },
 
   policy(opts) {

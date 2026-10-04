@@ -144,6 +144,32 @@ signed-in Devin CLI (`devin` on PATH or `DEVIN_CLI_PATH`). The permission
 policy is fail-closed by default: anything not explicitly allowed is denied,
 and credentials are never logged or persisted.
 
+
+### `probe` — ACP compatibility probe (BR-1)
+
+`devin-bridge probe` checks the ACP handshake end to end: `initialize` +
+`authenticate`, then (unless `--no-session`) a `session/new` in a temp dir
+labelled `bridge:probe` — which `devin-janitor` can later reap as an
+automatic session. Output is a JSON compat report (checks, models,
+configOptions); exit code 1 on failure. This is the foundation for
+`devin-internals-spec`'s drift checks.
+
+### `intake` — file-based mailbox (BR-3)
+
+`devin-bridge intake` processes task files dropped in
+`<state-dir>/mailbox/inbox/*.json` — **no network listener**. A task is
+`{"task": "prompt text", "repo"?: "<dir>", "model"?: "<id>"}`.
+
+- Tasks are **untrusted input**: they only become a prompt inside a normal
+  session, so the active policy still gates every capability (default
+  `ask` = human approves each step).
+- FIFO by filename; each file moves inbox → processing → done/failed, with
+  `.result.json` / `.err` sidecars.
+- `inbox/` must be owner-only (`chmod 700`); files over 64KB and tasks over
+  16k chars are rejected.
+- `--dry-run` validates without creating sessions; `--repo` sets a default
+  cwd for tasks without `repo`.
+
 ## Limitations
 
 - Uses the **undocumented** `acp` mode and `_meta.api_key` authentication
