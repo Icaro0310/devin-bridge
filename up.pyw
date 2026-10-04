@@ -78,6 +78,12 @@ def main() -> None:
         time.sleep(5)
         for name, p in list(procs.items()):
             if p.poll() is not None:
+                if name == "executor" and p.returncode == 0:
+                    # rc=0 = intentional singleton-mutex exit — another
+                    # instance holds the role; probe re-ensures if it dies.
+                    log(f"DIED {name} rc=0 — singleton held by another instance; not respawning")
+                    del procs[name]
+                    continue
                 log(f"DIED {name} rc={p.returncode} — respawning")
                 procs[name] = spawn(name)
 
