@@ -3,7 +3,7 @@
 > **Unofficial community project.** Not affiliated with, endorsed by, or
 > sponsored by Cognition AI. "Devin" is a trademark of Cognition AI.
 
-**[Português (BR)](README.pt-BR.md)** · English
+**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
 
 `devin-switch` swaps between named **Devin configuration profiles** —
 hooks, MCP servers, models, cascade rules, UI settings — with a verified
