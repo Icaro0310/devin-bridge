@@ -13,7 +13,7 @@ Linux uses the extended runtime: local execution plus optional Devin VM/QwenPaw 
 Install the Node.js CLI:
 
 ```bash
-npm install --global 'https://github.com/Icaro0310/devin-bridge/archive/4ad4f8a6b07160a6a266c1724e1bc87a564b4b39.tar.gz'
+npm install --global 'https://github.com/Icaro0310/devin-bridge/archive/c1615bc7a63166f126dabbcb7064d7e32e42edc0.tar.gz'
 ```
 
 ## Devin paths
