@@ -11,7 +11,7 @@
 
 > Unofficial community project; not affiliated with or endorsed by Cognition AI.
 >
-**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
+**[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 
 Background-worker fan-out policy for Devin Desktop. It provides a skill/rule
 and a deterministic planner; Devin executes the approved worker plan.
