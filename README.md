@@ -14,6 +14,8 @@
 
 **[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 
+Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosystem: the curated hub for the devin-* tools.
+
 A policy-gated bridge that drives `devin.exe acp` from the outside:
 create/resume isolated Devin sessions per project, send prompts, stream
 results — with a `policy.json` deciding what the session may do.
