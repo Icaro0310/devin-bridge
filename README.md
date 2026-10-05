@@ -13,6 +13,8 @@
 >
 **[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 
+Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosystem: the curated hub for the devin-* tools.
+
 Background-worker fan-out policy for Devin Desktop. It provides a skill/rule
 and a deterministic planner; Devin executes the approved worker plan.
 
