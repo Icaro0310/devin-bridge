@@ -11,7 +11,7 @@
 
 > Unofficial community project; not affiliated with or endorsed by Cognition AI.
 >
-> **[Português (BR)](README.pt-BR.md)** · English
+**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
 
 Background-worker fan-out policy for Devin Desktop. It provides a skill/rule
 and a deterministic planner; Devin executes the approved worker plan.
@@ -78,7 +78,7 @@ Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx
 Install the CLI from this repository:
 
 ```bash
-pipx install "devin-orchestrator @ git+https://github.com/Icaro0310/devin-orchestrator.git"
+pipx install "git+https://github.com/Icaro0310/devin-orchestrator.git"
 ```
 
 ## Usage
