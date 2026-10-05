@@ -14,6 +14,8 @@
 >
 **[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 
+Part of the [awesome-devin](https://github.com/Icaro0310/awesome-devin) ecosystem: the curated hub for the devin-* tools.
+
 A local-first dashboard of active Devin CLI/Desktop sessions and subagents. It
 reads Devin's session database read-only and renders activity in a browser. Run
 it on the Devin machine, or send state from a local probe to a private hub.
