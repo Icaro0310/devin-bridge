@@ -12,7 +12,7 @@
 > Unofficial community tooling for Devin. Not affiliated with, endorsed by, or
 > sponsored by Cognition AI. Devin is a Cognition AI trademark.
 >
-**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
+**[Linux](README.linux.md)** · **[Personal Windows](README.windows.md)** · **[Corporate Windows](README.corporate-windows.md)**
 
 A local-first dashboard of active Devin CLI/Desktop sessions and subagents. It
 reads Devin's session database read-only and renders activity in a browser. Run
