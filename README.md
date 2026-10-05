@@ -12,7 +12,7 @@
 > **Unofficial community project.** Not affiliated with, endorsed by, or
 > sponsored by Cognition AI. "Devin" is a trademark of Cognition AI.
 
-**[Português (BR)](README.pt-BR.md)** · English
+**[Windows](README.windows.md)** · **[Linux](README.linux.md)** · English
 
 A policy-gated bridge that drives `devin.exe acp` from the outside:
 create/resume isolated Devin sessions per project, send prompts, stream

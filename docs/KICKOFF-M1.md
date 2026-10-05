@@ -2,7 +2,7 @@
 
 Dedicated session for THIS repo — RESEARCH wave; the ACP client already
 exists in the orchestrator workspace (this repo ports + hardens it).
-`docs/SPEC.md` EN, bilingual READMEs, logic in `src/devin_bridge/` + thin
+`docs/SPEC.md` EN, a shared README plus Windows/Linux platform guides, logic in `src/devin_bridge/` + thin
 `cli.py`, small commits + Devin trailer, push, STATUS.md + CHANGELOG.md.
 
 ## One sentence
