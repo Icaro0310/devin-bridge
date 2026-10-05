@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from swapmon import collect_swap  # noqa: E402
+from ecomon import collect_eco  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 
@@ -396,11 +397,18 @@ def collect_state() -> dict:
 INDEX = (ROOT / "index.html").read_bytes()
 STATE_CACHE = {"ts": int(time.time()), "agents": [], "services": {}, "events": [], "loading": True}
 STATE_LOCK = threading.Lock()
+ECO_CACHE = {"eco": None, "ts": 0}
+ECO_LOCK = threading.Lock()
 
 
 def cached_state() -> dict:
     with STATE_LOCK:
         return STATE_CACHE
+
+
+def cached_eco() -> dict:
+    with ECO_LOCK:
+        return ECO_CACHE["eco"]
 
 
 def refresh_state_loop() -> None:
@@ -413,6 +421,19 @@ def refresh_state_loop() -> None:
         with STATE_LOCK:
             STATE_CACHE = next_state
         time.sleep(2)
+
+
+def refresh_eco_loop() -> None:
+    """Eco collect é mais pesado (probes HTTP + process table + scheduler)
+    — corre num ciclo mais lento que o state loop."""
+    while True:
+        try:
+            eco = collect_eco()
+        except Exception as exc:
+            eco = {"error": str(exc)}
+        with ECO_LOCK:
+            ECO_CACHE.update(eco=eco, ts=int(time.time()))
+        time.sleep(12)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -433,6 +454,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith("/api/state"):
             body = json.dumps(cached_state()).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+        elif self.path.startswith("/api/eco-raw"):
+            body = json.dumps(cached_eco() or {}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+        elif self.path.startswith("/api/eco"):
+            body = json.dumps({"eco": cached_eco()}).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
         elif self.path in ("/", "/index.html"):
@@ -462,4 +491,5 @@ if __name__ == "__main__":
     print(f"devin-office smoke daemon -> http://localhost:{port}")
     print(f"sessions.db: {SESSIONS_DB} (exists={SESSIONS_DB.exists()})")
     threading.Thread(target=refresh_state_loop, daemon=True).start()
+    threading.Thread(target=refresh_eco_loop, daemon=True).start()
     ThreadingHTTPServer(("127.0.0.1", port), Handler).serve_forever()

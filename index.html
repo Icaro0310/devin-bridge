@@ -57,6 +57,19 @@
     background:var(--green);margin-right:5px;vertical-align:middle}
   #swapq .io{margin-top:6px;font-size:9.5px;border-top:1px solid var(--trace);padding-top:5px}
   #swapq .empty{margin-top:2px;font-style:italic}
+  /* ---- Ecosystem panel ---- */
+  #eco{position:fixed;left:20px;top:64px;bottom:56px;z-index:5;width:250px;overflow-y:auto;
+    background:rgba(22,27,38,.92);border:1px solid var(--chip-line);border-radius:10px;
+    padding:10px 12px;font-size:10.5px;color:var(--dim);display:none;scrollbar-width:thin}
+  #eco .t{font-size:9.5px;letter-spacing:1.2px;color:var(--txt);font-weight:700;margin:8px 0 4px}
+  #eco .t:first-child{margin-top:0}
+  #eco .host{color:var(--amber);font-size:9px;letter-spacing:1px}
+  #eco .q{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+  #eco .q .n{color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #eco .q .v{flex-shrink:0}
+  #eco .d{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  #eco .d.up{background:var(--green)} #eco .d.down{background:var(--red)}
+  #eco .meta{margin-top:8px;font-size:9.5px;border-top:1px solid var(--trace);padding-top:5px}
 </style>
 </head>
 <body>
@@ -71,6 +84,7 @@
   <span class="lg b"></span>subagent (dynamic arm)
 </div>
 <div id="swapq"></div>
+<div id="eco"></div>
 <script>
 const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
 const $=id=>document.getElementById(id);
@@ -85,7 +99,7 @@ function toolRows(eco){
     for(const [group,states] of Object.entries({probes:data.probes,units:data.units,tools:data.tools})){
       if(!states||typeof states!=="object")continue;
       for(const [name,value] of Object.entries(states)){
-        const up=group==="probes"?[200,406].includes(value):group==="units"?value==="active":!!value;
+        const up=group==="probes"?[200,401,403,406].includes(value):group==="units"?value==="active":!!value;
         rows.push([`${host}-${group}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${name}`,up]);
       }
     }
@@ -261,6 +275,34 @@ function applyState(state){
   updateStat();
   renderSwap(LAST_STATE.swap);
 }
+function renderEcoPanel(eco){
+  const box=$("eco");
+  if(!eco||typeof eco!=="object"){box.style.display="none";return;}
+  const groups=[["probes","HTTP PROBES"],["tools","PROCESSES"],["units","SCHEDULED"],["pm2","PM2"]];
+  let html="";
+  for(const [host,data] of Object.entries(eco)){
+    if(!data||typeof data!=="object")continue;
+    html+=`<div class="t"><span class="host">${esc(host.toUpperCase())}</span> · ECOSYSTEM</div>`;
+    for(const [g,title] of groups){
+      const entries=g==="pm2"
+        ?(data.pm2||[]).map(p=>[p.name,p.status==="online"||!!p.cron])
+        :Object.entries(data[g]||{}).map(([n,v])=>[n,
+            g==="probes"?[200,401,403,406].includes(v):g==="units"?v==="active":!!v]);
+      if(!entries.length)continue;
+      const up=entries.filter(e=>e[1]).length;
+      html+=`<div class="t">${title} · ${up}/${entries.length}</div>`;
+      for(const [n,ok] of entries)
+        html+=`<div class="q"><span class="n"><span class="d ${ok?"up":"down"}"></span>${esc(n)}</span><span class="v">${ok?"up":"down"}</span></div>`;
+    }
+    const m=data.meta||{};
+    const bits=[];
+    if(m.repos!=null)bits.push(`${m.repos} repos`);
+    if(m.clis!=null)bits.push(`${m.clis} CLIs`);
+    if(bits.length)html+=`<div class="meta">${esc(bits.join(" · "))}</div>`;
+  }
+  box.innerHTML=html;
+  box.style.display=html?"block":"none";
+}
 function applyEco(eco){
   const rows=toolRows(eco);
   const changed=JSON.stringify(rows)!==JSON.stringify(TOOLS);
@@ -277,6 +319,7 @@ function applyEco(eco){
     node.lbl.classList.toggle("on",on);
     node.lbl.classList.toggle("down",!on);
   }
+  renderEcoPanel(eco);
   updateStat();
 }
 

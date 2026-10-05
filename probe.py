@@ -27,14 +27,20 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from daemon import collect_state  # noqa: E402
-from executor import INBOX, OUTBOX, ensure_dirs, pid_alive, PIDFILE  # noqa: E402
+from executor import (INBOX, OUTBOX, ensure_dirs, pid_alive, PIDFILE,  # noqa: E402
+                      singleton_alive)
 
 ROOT = Path(__file__).resolve().parent
 EXECUTOR = ROOT / "executor.py"
 CREATE_NO_WINDOW = 0x08000000
 DETACHED = 0x00000008
 
-HUB = os.environ.get("OFFICE_HUB", "http://localhost:8790")
+HUBS = [
+    h.rstrip("/") for h in
+    os.environ.get("OFFICE_HUBS",
+                   os.environ.get("OFFICE_HUB", "http://localhost:8790")
+                   ).split(",") if h.strip()
+]
 INTERVAL = float(os.environ.get("OFFICE_INTERVAL", "3"))
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
 CONTROL_ENABLED = os.environ.get("OFFICE_CONTROL_ENABLED", "").lower() in {
@@ -57,9 +63,9 @@ def executor_spawn_kwargs(platform: str | None = None) -> dict:
     return options
 
 
-def http(path: str, body=None, timeout=5):
+def http(hub: str, path: str, body=None, timeout=5):
     req = urllib.request.Request(
-        f"{HUB}{path}",
+        f"{hub}{path}",
         data=json.dumps(body).encode() if body is not None else None,
         headers={"Content-Type": "application/json",
                  "X-Office-Token": TOKEN},
@@ -69,9 +75,9 @@ def http(path: str, body=None, timeout=5):
         return resp.status, json.loads(resp.read() or b"{}")
 
 
-def push(state: dict) -> bool:
+def push(hub: str, state: dict) -> bool:
     try:
-        code, _ = http("/api/ingest", state, timeout=4)
+        code, _ = http(hub, "/api/ingest", state, timeout=4)
         return code == 200
     except Exception:
         return False
@@ -79,7 +85,7 @@ def push(state: dict) -> bool:
 
 def ensure_executor() -> None:
     try:
-        if PIDFILE.exists() and pid_alive(int(PIDFILE.read_text().strip())):
+        if singleton_alive():
             return
     except Exception:
         pass
@@ -96,23 +102,24 @@ def poll_commands(acked: dict, last_ensure: list) -> None:
     if time.time() - last_ensure[0] > 30:
         last_ensure[0] = time.time()
         ensure_executor()
-    try:
-        _, data = http("/api/cmd/pending", timeout=4)
-    except Exception:
-        return
-    for cmd in data.get("pending", []):
-        cid = cmd.get("id")
-        if not cid:
-            continue
+    for hub in HUBS:
         try:
-            (INBOX / f"{cid}.json").write_text(
-                json.dumps(cmd, ensure_ascii=False), encoding="utf-8")
-            http("/api/cmd/ack", {"id": cid, "status": "dispatched",
-                                  "result": "queued for local executor"})
-            acked[cid] = "dispatched"
-            ensure_executor()
+            _, data = http(hub, "/api/cmd/pending", timeout=4)
         except Exception:
-            pass
+            continue
+        for cmd in data.get("pending", []):
+            cid = cmd.get("id")
+            if not cid:
+                continue
+            try:
+                (INBOX / f"{cid}.json").write_text(
+                    json.dumps(cmd, ensure_ascii=False), encoding="utf-8")
+                http(hub, "/api/cmd/ack", {"id": cid, "status": "dispatched",
+                                           "result": "queued for local executor"})
+                acked[cid] = "dispatched"
+                ensure_executor()
+            except Exception:
+                pass
     # resultados do executor → acks
     terminal = ("delivered", "spawned", "interrupted", "interrupt-sent",
                 "queued-manual", "unsupported", "error")
@@ -127,14 +134,17 @@ def poll_commands(acked: dict, last_ensure: list) -> None:
         status = res.get("status", "")
         if acked.get(cid) == status:
             continue
-        try:
-            http("/api/cmd/ack", {"id": cid, "status": status,
-                                  "result": res.get("detail", "")})
-            done = True
-        except urllib.error.HTTPError as exc:
-            done = exc.code == 404   # id desconhecido no hub → desiste
-        except Exception:
-            done = False
+        for hub in HUBS:
+            try:
+                http(hub, "/api/cmd/ack", {"id": cid, "status": status,
+                                           "result": res.get("detail", "")})
+                done = True
+            except urllib.error.HTTPError as exc:
+                done = exc.code == 404   # id desconhecido no hub → desiste
+            except Exception:
+                done = False
+            if done:
+                break
         if done:
             acked[cid] = status
             if status in terminal:
@@ -142,11 +152,11 @@ def poll_commands(acked: dict, last_ensure: list) -> None:
 
 
 def main() -> None:
-    last_hash = ""
+    last_hash = {h: "" for h in HUBS}
     failures = 0
     acked = {}
     last_ensure = [0.0]
-    print(f"devin-office probe -> {HUB} every {INTERVAL}s")
+    print(f"devin-office probe -> {HUBS} every {INTERVAL}s")
     if CONTROL_ENABLED:
         ensure_dirs()
         ensure_executor()
@@ -155,14 +165,20 @@ def main() -> None:
             state = collect_state()
             blob = json.dumps(state, sort_keys=True)
             h = hashlib.sha1(blob.encode()).hexdigest()
-            if h != last_hash:
-                if push(state):
-                    last_hash = h
-                    failures = 0
-                else:
-                    failures += 1
-                    if failures in (1, 10, 60):
-                        print(f"probe: hub unreachable ({failures} failures)", flush=True)
+            sent = 0
+            for hub in HUBS:
+                if h == last_hash[hub]:
+                    sent += 1
+                    continue
+                if push(hub, state):
+                    last_hash[hub] = h
+                    sent += 1
+            if sent:
+                failures = 0
+            else:
+                failures += 1
+                if failures in (1, 10, 60):
+                    print(f"probe: all hubs unreachable ({failures} failures)", flush=True)
             if CONTROL_ENABLED:
                 poll_commands(acked, last_ensure)
         except Exception as exc:
@@ -173,7 +189,7 @@ def main() -> None:
 if __name__ == "__main__":
     args = sys.argv[1:]
     if "--hub" in args:
-        HUB = args[args.index("--hub") + 1].rstrip("/")
+        HUBS = [args[args.index("--hub") + 1].rstrip("/")]
     if "--interval" in args:
         INTERVAL = float(args[args.index("--interval") + 1])
     main()
