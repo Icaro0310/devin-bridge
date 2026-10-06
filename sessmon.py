@@ -22,6 +22,32 @@ RUN_WINDOW_S = 120      # lock held + activity within 2min → actively working
 RUN_GRACE_S = 45        # no lock but this fresh → still starting/flapping
 QUESTION_TAIL = 400     # chars of the last assistant text scanned for a question
 CLOSED_LIMIT = 50
+STALE_REVIEW_S = 3 * 86400   # review parado há >3 dias → closed automático
+AUTO_SCAN_LIMIT = 5000       # msgs recentes onde se procura input humano
+HUMAN_MARK = "chisel/client-message-id"  # user msgs da GUI/CLI têm isto;
+                                         # scripts/ACP/heartbeat não
+
+# sid → (last_activity_at, auto). O veredito só muda quando a sessão recebe
+# msgs novas, por isso cacheia-se — o scan é o pior caso (sessões de
+# automação têm dezenas de milhares de msgs).
+_auto_cache: dict = {}
+
+
+def is_automation(con, sid: str, last_act: int) -> bool:
+    """True se nunca houve input humano nesta sessão: toda user message
+    sem chisel/client-message-id veio de script (heartbeat, juiz, cron…).
+    """
+    ent = _auto_cache.get(sid)
+    if ent and ent[0] == last_act:
+        return ent[1]
+    row = con.execute(
+        "select 1 from (select chat_message from message_nodes "
+        "where session_id=? order by row_id desc limit ?) "
+        "where chat_message like ? limit 1",
+        (sid, AUTO_SCAN_LIMIT, f"%{HUMAN_MARK}%")).fetchone()
+    auto = row is None
+    _auto_cache[sid] = (last_act, auto)
+    return auto
 
 QUESTION_RE = re.compile(
     r"(\?\s*$|quer que eu|diga |posso |deseja|gostaria|precisa que eu|"
@@ -124,9 +150,12 @@ def classify(locked: bool, age_s: float, node: dict,
         if last_tool_status == "failed":
             return "review", "last tool failed"
         return "review", "done"
-    if role == "user":
+    if role == "user" and (node or {}).get("human"):
         # o utilizador falou e o Devin nunca respondeu (sessão morta/idle)
         return "blocked", "unanswered"
+    if role == "user":
+        # última msg veio de script (sem client-id) — não espera o user
+        return "review", "ended"
     if locked:
         return "review", "idle"
     return "review", "ended"
@@ -161,8 +190,10 @@ def collect_sessions(con, locks_dir: Path, now: float | None = None,
             "order by row_id desc limit 1", (sid,)).fetchone()
         if row:
             d = _jload(row[0]) or {}
+            ext = ((d.get("metadata") or {}).get("extensions") or {})
             node = {"role": d.get("role"),
                     "has_tools": bool(d.get("tool_calls")),
+                    "human": HUMAN_MARK in ext,
                     "text": _msg_text(d)}
         tool_row = con.execute(
             "select tool_call_update_json from tool_call_state "
@@ -178,6 +209,12 @@ def collect_sessions(con, locks_dir: Path, now: float | None = None,
         eff_act = max(last_act or 0, acp_ts)
         status, reason = classify(locked, now - eff_act, node,
                                   last_tool_status, gui_active, acp_st)
+        if is_automation(con, sid, last_act or 0):
+            # sessão aberta por automação (Devin/scripts) — nunca espera
+            # input humano, não pertence ao fluxo do utilizador
+            status, reason = "closed", "automation"
+        elif status == "review" and now - eff_act > STALE_REVIEW_S:
+            status, reason = "closed", "stale >3d"
         if sid in closed:
             status, reason = "closed", "closed by user"
         out.append({

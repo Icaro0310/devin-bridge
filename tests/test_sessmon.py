@@ -25,10 +25,14 @@ CREATE TABLE tool_call_state (session_id TEXT NOT NULL, tool_call_id TEXT NOT NU
 """
 
 
-def _msg(role, text="", tools=None):
-    return json.dumps({"role": role,
-                       "content": [{"type": "text", "text": text}],
-                       "tool_calls": tools or []})
+def _msg(role, text="", tools=None, human=True):
+    d = {"role": role,
+         "content": [{"type": "text", "text": text}],
+         "tool_calls": tools or []}
+    if role == "user" and human:
+        d["metadata"] = {"extensions":
+                         {"chisel/client-message-id": "m1"}}
+    return json.dumps(d)
 
 
 def _tool(status):
@@ -59,19 +63,22 @@ class SessMonTests(unittest.TestCase):
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         self._fds.append(fd)
 
-    def _session(self, sid, age=100, title="t", hidden=0):
+    def _session(self, sid, age=100, title="t", hidden=0, human=True):
         self.db.execute(
             "insert into sessions (id, working_directory, backend_type, model,"
             " agent_mode, created_at, last_activity_at, title, hidden)"
             " values (?,?,?,?,?,?,?,?,?)",
             (sid, "/home/u/proj", "cli", "swe-1", "bypass",
              self.now - age - 100, self.now - age, title, hidden))
+        if human:
+            # sessão real: o prompt inicial veio da GUI/CLI (client-id)
+            self._node(sid, "user", "prompt inicial")
 
-    def _node(self, sid, role, text="", tools=None):
+    def _node(self, sid, role, text="", tools=None, human=True):
         self.db.execute(
             "insert into message_nodes (session_id, node_id, chat_message,"
             " created_at) values (?,?,?,?)",
-            (sid, 1, _msg(role, text, tools), self.now))
+            (sid, 2, _msg(role, text, tools, human), self.now))
 
     def _toolcall(self, sid, status):
         self.db.execute(
@@ -165,6 +172,42 @@ class SessMonTests(unittest.TestCase):
         self._toolcall("s-long", "in_progress")
         self._hold_lock("s-long")
         self.assertEqual(self._collect()["s-long"]["status"], "running")
+
+    def test_automation_is_closed(self):
+        # sessão aberta por script: única user msg sem client-id → closed
+        self._session("s-auto", age=300, human=False)
+        self._node("s-auto", "user", "HEARTBEAT executa a checklist",
+                   human=False)
+        s = self._collect()["s-auto"]
+        self.assertEqual((s["status"], s["reason"]), ("closed", "automation"))
+
+    def test_automation_beats_blocked_question(self):
+        # automação que "pergunta" não está à espera do utilizador → closed
+        self._session("s-autoq", age=300, human=False)
+        self._node("s-autoq", "user", "score this json", human=False)
+        self._node("s-autoq", "assistant", "Quer que eu continue?", human=False)
+        s = self._collect()["s-autoq"]
+        self.assertEqual(s["status"], "closed")
+
+    def test_stale_review_auto_closes(self):
+        self._session("s-old", age=4 * 86400)
+        self._node("s-old", "assistant", "Feito.")
+        s = self._collect()["s-old"]
+        self.assertEqual((s["status"], s["reason"]), ("closed", "stale >3d"))
+
+    def test_script_last_user_msg_not_blocked(self):
+        # sessão humana, mas a última msg "user" veio de script (sem
+        # client-id) — não está à espera do utilizador → review
+        self._session("s-script", age=4000)
+        self._node("s-script", "user", "Conversation to summarize: ...",
+                   human=False)
+        s = self._collect()["s-script"]
+        self.assertEqual((s["status"], s["reason"]), ("review", "ended"))
+
+    def test_fresh_review_stays(self):
+        self._session("s-fresh", age=2 * 86400)
+        self._node("s-fresh", "assistant", "Feito.")
+        self.assertEqual(self._collect()["s-fresh"]["status"], "review")
 
     def test_blocked_on_pending_permission(self):
         self._session("s-perm", age=99999)
