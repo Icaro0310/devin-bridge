@@ -13,7 +13,7 @@ Corporate Windows is a local-only environment: no Devin VM, QwenPaw, Slack depen
 Install the Node.js CLI:
 
 ```powershell
-npm install --global "https://github.com/Icaro0310/devin-bridge/archive/refs/heads/main.tar.gz"
+npm install --global "@icaro0310/devin-bridge"
 ```
 
 ## Devin paths
