@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Session kanban page (`/kanban.html`, served by daemon and hub):
+  four columns — Running (lock held + open turn), Blocked (pending
+  permission, question tail, or unanswered user message), Review (turn
+  ended, awaiting review) and Closed (persisted in `kanban.json` via
+  `POST /api/kanban` on whichever side serves `/api/state`). The header
+  label `devin-office` links to the kanban; the circuit board is
+  unchanged. Collector: `sessmon.py` (`collect_sessions()`), wired into
+  `collect_state()` so split mode (probe→hub) carries it for free.
 - SwapFile Queue panel (Linux): `swapmon.py` collects swap totals,
   page-in/out rates and the per-process `VmSwap` queue from `/proc`
   read-only; the dashboard renders a bottom-right panel that flags
@@ -16,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   without `/proc`.
 
 ### Fixed
+
+- `session_locked()` on Linux never detected open sessions: POSIX locks
+  are advisory, so the `O_RDWR` probe always succeeded. Now uses a
+  non-blocking `flock` probe on POSIX (Windows behaviour unchanged).
 
 - Scheduled PM2 jobs (`cron_restart`, idle between runs) no longer render
   as down — they show a ⏰ marker and count as healthy.
