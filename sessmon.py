@@ -83,21 +83,44 @@ def _msg_text(d: dict) -> str:
 
 
 def classify(locked: bool, age_s: float, node: dict,
-             last_tool_status: str | None) -> tuple[str, str]:
-    """→ (status, reason). reason é a pista mostrada no card."""
+             last_tool_status: str | None, gui_active: bool = False,
+             acp_status: str | None = None) -> tuple[str, str]:
+    """→ (status, reason). reason é a pista mostrada no card.
+
+    gui_active: a acp-messages db da sessão (Desktop) foi escrita dentro da
+    janela — o processo está vivo e a trabalhar mesmo sem lock CLI.
+    acp_status: status da última tool_call na acp db (só passado quando a
+    db está fresca ou a sessão locked) — autoritativo para sessões GUI.
+    """
     if last_tool_status == "pending":
         return "blocked", "approval"
+    # GUI: tool_call a correr na acp db = working, mesmo sem writes novos
+    # (a db não grava enquanto a tool corre — ex.: sleep/watch longos)
+    if acp_status == "in_progress":
+        return "running", "working"
     role = (node or {}).get("role")
     has_tools = bool((node or {}).get("has_tools"))
     recent = age_s <= RUN_WINDOW_S
-    # turno ainda aberto: tools em curso, in_progress, ou user acabou de falar
-    turn_open = has_tools or last_tool_status == "in_progress" or role == "user"
-    if recent and turn_open and (locked or age_s <= RUN_GRACE_S):
-        return "running", "working" if role != "user" else "reply pending"
+    asked = False
     if role == "assistant" and not has_tools:
         tail = (node or {}).get("text", "")[-QUESTION_TAIL:]
-        if QUESTION_RE.search(tail):
+        asked = bool(QUESTION_RE.search(tail))
+    # turno ainda aberto: tools em curso, in_progress, user acabou de falar,
+    # ou role=tool (resultado gravado — o agente ainda não respondeu)
+    turn_open = (has_tools or last_tool_status == "in_progress"
+                 or role in ("user", "tool"))
+    # lock HELD ou acp db fresca + atividade recente = processo vivo a
+    # escrever → working, mesmo que o último node pareça fechado.
+    # tool in_progress antiga com lock = tool longa em curso.
+    if (locked or gui_active) and (recent or last_tool_status == "in_progress"):
+        if asked:
             return "blocked", "question"
+        return "running", "working" if role != "user" else "reply pending"
+    if recent and turn_open and age_s <= RUN_GRACE_S:
+        return "running", "working" if role != "user" else "reply pending"
+    if asked:
+        return "blocked", "question"
+    if role == "assistant" and not has_tools:
         if last_tool_status == "failed":
             return "review", "last tool failed"
         return "review", "done"
@@ -110,10 +133,20 @@ def classify(locked: bool, age_s: float, node: dict,
 
 
 def collect_sessions(con, locks_dir: Path, now: float | None = None,
-                     closed: set | None = None, limit: int = 200) -> list:
-    """Todas as sessões não-hidden, mais recente primeiro, já classificadas."""
+                     closed: set | None = None, limit: int = 200,
+                     activity: dict | None = None,
+                     acp_tool: dict | None = None) -> list:
+    """Todas as sessões não-hidden, mais recente primeiro, já classificadas.
+
+    `activity`: sid → epoch de actividade extra (ex.: mtime da acp-messages
+    db da sessão GUI — a sessions.db atrasa-se em sessões do Desktop).
+    `acp_tool`: sid → status da última tool_call na acp db — autoritativo
+    para sessões GUI (a db não escreve enquanto a tool corre).
+    """
     now = now if now is not None else time.time()
     closed = closed or set()
+    activity = activity or {}
+    acp_tool = acp_tool or {}
     rows = con.execute(
         "select id, title, model, agent_mode, last_activity_at, "
         "working_directory, created_at from sessions "
@@ -136,9 +169,15 @@ def collect_sessions(con, locks_dir: Path, now: float | None = None,
             "where session_id=? order by rowid desc limit 1", (sid,)).fetchone()
         last_tool_status = (
             (_jload(tool_row[0]) or {}).get("status") if tool_row else None)
+        # GUI: o estado da acp db ganha — a sessions.db pode estar atrasada
+        acp_st = acp_tool.get(sid)
+        last_tool_status = acp_st or last_tool_status
         locked = lock_held(locks_dir, sid)
-        status, reason = classify(locked, now - (last_act or 0),
-                                  node, last_tool_status)
+        acp_ts = activity.get(sid, 0)
+        gui_active = acp_ts > (last_act or 0) and now - acp_ts <= RUN_WINDOW_S
+        eff_act = max(last_act or 0, acp_ts)
+        status, reason = classify(locked, now - eff_act, node,
+                                  last_tool_status, gui_active, acp_st)
         if sid in closed:
             status, reason = "closed", "closed by user"
         out.append({
@@ -150,8 +189,8 @@ def collect_sessions(con, locks_dir: Path, now: float | None = None,
             "status": status,
             "reason": reason,
             "locked": locked,
-            "lastActivity": last_act or 0,
-            "ageS": int(now - (last_act or 0)),
+            "lastActivity": eff_act,
+            "ageS": int(now - eff_act),
         })
     # closed só precisa do rabo recente — o resto fica para trás
     n_closed = sum(1 for s in out if s["status"] == "closed")

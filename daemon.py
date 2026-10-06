@@ -103,6 +103,24 @@ def acp_map() -> dict:
     return out
 
 
+def acp_last_tool_status(path: Path) -> str | None:
+    """Status da última tool_call na acp db de uma sessão GUI
+    (in_progress/pending/completed/...). Autoritativo para o Desktop:
+    a db não escreve enquanto uma tool corre, por isso o mtime não chega."""
+    try:
+        db = ro(path)
+        row = db.execute(
+            "select payload from messages where kind='tool_call' "
+            "order by position desc limit 1"
+        ).fetchone()
+        db.close()
+        if row:
+            return ((jload(row[0]) or {}).get("content") or {}).get("status")
+    except Exception:
+        pass
+    return None
+
+
 def acp_subagents(path: Path) -> list:
     """Lê mensagens kind='subagent' da ACP db de uma sessão GUI.
     Cada uma tem status real + childMessages (tool calls do worker)."""
@@ -386,9 +404,24 @@ def collect_state() -> dict:
 
     # kanban: todas as sessões não-hidden classificadas (running/blocked/
     # review/closed). Corre no probe também — o hub re-aplica o closed dele.
+    # Sessões GUI gravam na acp-messages db, não na sessions.db — o mtime
+    # dessa db entra como actividade extra e a última tool_call como estado
+    # real do turno (a db não escreve enquanto uma tool corre).
     try:
+        acp_act, acp_tool = {}, {}
+        for sid, p in acp_by_sid.items():
+            try:
+                mtime = p.stat().st_mtime
+            except OSError:
+                continue
+            acp_act[sid] = mtime
+            if now - mtime <= 3600 or session_locked(sid):
+                st = acp_last_tool_status(p)
+                if st:
+                    acp_tool[sid] = st
         state["sessions"] = sessmon.collect_sessions(
-            db, SESSION_LOCKS, now, sessmon.load_closed(KANBAN_FILE))
+            db, SESSION_LOCKS, now, sessmon.load_closed(KANBAN_FILE),
+            activity=acp_act, acp_tool=acp_tool)
     except Exception as exc:
         state["sessions_error"] = str(exc)
 

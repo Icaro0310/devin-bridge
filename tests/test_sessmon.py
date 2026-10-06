@@ -1,4 +1,6 @@
+import fcntl
 import json
+import os
 import sqlite3
 import sys
 import tempfile
@@ -42,10 +44,20 @@ class SessMonTests(unittest.TestCase):
         self.db = sqlite3.connect(str(self.root / "sessions.db"))
         self.db.executescript(DDL)
         self.now = int(time.time())
+        self._fds = []
 
     def tearDown(self):
         self.db.close()
+        for fd in self._fds:
+            os.close(fd)
         self._tmp.cleanup()
+
+    def _hold_lock(self, sid):
+        """Simula um processo devin vivo: flock exclusivo no .lock."""
+        p = self.locks / f"{sid}.lock"
+        fd = os.open(str(p), os.O_RDWR | os.O_CREAT)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self._fds.append(fd)
 
     def _session(self, sid, age=100, title="t", hidden=0):
         self.db.execute(
@@ -88,6 +100,71 @@ class SessMonTests(unittest.TestCase):
         self._node("s-q", "assistant", "Tenho duas opções. Quer que eu siga?")
         s = self._collect()["s-q"]
         self.assertEqual((s["status"], s["reason"]), ("blocked", "question"))
+
+    def test_running_locked_tool_result_turn(self):
+        # GUI a meio de um turno: último node gravado é um tool result —
+        # turno ainda aberto, lock mantido, actividade fresca.
+        self._session("s-tool", age=30)
+        self._node("s-tool", "tool", "exit 0")
+        self._hold_lock("s-tool")
+        s = self._collect()["s-tool"]
+        self.assertEqual((s["status"], s["reason"]), ("running", "working"))
+
+    def test_running_locked_fresh_assistant_text(self):
+        # Sessão GUI locked com escrita fresca na acp db (sessions.db atrasa):
+        # último node é texto do assistant mas o processo está a trabalhar.
+        self._session("s-acp", age=5000)
+        self._node("s-acp", "assistant", "a analisar os resultados")
+        self._hold_lock("s-acp")
+        s = self._collect(activity={"s-acp": self.now - 20})["s-acp"]
+        self.assertEqual(s["status"], "running")
+        self.assertEqual(s["ageS"], 20)
+
+    def test_running_gui_acp_fresh_no_lock(self):
+        # Sessão GUI sem lock CLI mas a acp db dela acabou de ser escrita —
+        # o Desktop está a trabalhar nela.
+        self._session("s-gui", age=300)
+        self._node("s-gui", "assistant", "texto parcial sem pergunta.")
+        s = self._collect(activity={"s-gui": self.now - 10})["s-gui"]
+        self.assertEqual(s["status"], "running")
+
+    def test_running_gui_acp_tool_in_progress(self):
+        # Sessão GUI com tool longa (sleep/watch): a acp db não escreve
+        # enquanto a tool corre — o status in_progress é autoritativo.
+        self._session("s-guilong", age=300)
+        self._node("s-guilong", "tool", "partial")
+        s = self._collect(activity={"s-guilong": self.now - 200},
+                          acp_tool={"s-guilong": "in_progress"})["s-guilong"]
+        self.assertEqual(s["status"], "running")
+
+    def test_blocked_gui_acp_tool_pending(self):
+        self._session("s-guip", age=300)
+        self._node("s-guip", "assistant", "preciso de aprovação")
+        s = self._collect(acp_tool={"s-guip": "pending"})["s-guip"]
+        self.assertEqual((s["status"], s["reason"]), ("blocked", "approval"))
+
+    def test_locked_stale_is_review(self):
+        # Lock mantido mas sem actividade há muito → não é working.
+        self._session("s-idle", age=5000)
+        self._node("s-idle", "assistant", "Feito.")
+        self._hold_lock("s-idle")
+        self.assertEqual(self._collect()["s-idle"]["status"], "review")
+
+    def test_blocked_locked_fresh_question(self):
+        # Pergunta vence running mesmo com lock + actividade fresca.
+        self._session("s-lq", age=10)
+        self._node("s-lq", "assistant", "Quer que eu siga?")
+        self._hold_lock("s-lq")
+        s = self._collect()["s-lq"]
+        self.assertEqual((s["status"], s["reason"]), ("blocked", "question"))
+
+    def test_running_locked_in_progress_old(self):
+        # Tool longa com lock: sem writes novos mas ainda a correr.
+        self._session("s-long", age=600)
+        self._node("s-long", "assistant", "a correr testes", tools=[{"x": 1}])
+        self._toolcall("s-long", "in_progress")
+        self._hold_lock("s-long")
+        self.assertEqual(self._collect()["s-long"]["status"], "running")
 
     def test_blocked_on_pending_permission(self):
         self._session("s-perm", age=99999)
