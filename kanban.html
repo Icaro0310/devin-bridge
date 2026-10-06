@@ -19,6 +19,9 @@
   header h1 a{color:var(--txt);text-decoration:none}
   header h1 a:hover{color:var(--green)}
   header .sub{color:var(--dim);font-size:11px}
+  #nav{display:flex;gap:14px;align-items:center}
+  #nav a{color:var(--dim);font-size:11px;text-decoration:none}
+  #nav a:hover{color:var(--green)}
   #stat{font-size:11px;color:var(--dim);text-align:right}
   #stat b{color:var(--green);font-weight:600}
   #stat b.bad{color:var(--red)}
@@ -56,11 +59,16 @@
 <header>
   <div><h1><a href="/" title="live session board">devin-office</a></h1>
     <div class="sub">session kanban</div></div>
-  <div id="stat">connecting…</div>
+  <div id="nav">
+    <a href="/" title="pixel-art board">← board</a>
+    <a id="dash" href="#" title="ecosystem dashboard">← dashboard</a>
+    <div id="stat">connecting…</div>
+  </div>
 </header>
 <div id="cols"></div>
 <script>
 const $=id=>document.getElementById(id);
+$("dash").href=location.protocol+"//"+location.hostname+":8900/";
 const KCOLS=[["running","RUNNING"],["blocked","BLOCKED"],["review","REVIEW"],["closed","CLOSED"]];
 let LAST=[];
 const PENDING={};  // id → {status, until} — override otimista pós-click
