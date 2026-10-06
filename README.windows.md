@@ -13,7 +13,7 @@ Personal Windows uses the extended runtime: local execution plus optional Devin 
 Install the Node.js CLI:
 
 ```powershell
-npm install --global "https://github.com/Icaro0310/devin-bridge/archive/c1615bc7a63166f126dabbcb7064d7e32e42edc0.tar.gz"
+npm install --global "https://github.com/Icaro0310/devin-bridge/archive/refs/heads/main.tar.gz"
 ```
 
 ## Devin paths
