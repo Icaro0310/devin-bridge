@@ -3,6 +3,7 @@
 <img src="assets/banner.svg" alt="devin-orchestrator" width="100%"/>
 
 <a href="https://github.com/Icaro0310/devin-orchestrator/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-orchestrator/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://pypi.org/project/devin-fanout/"><img src="https://img.shields.io/pypi/v/devin-fanout" alt="PyPI: devin-fanout"/></a>
 
 
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-orchestrator"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-orchestrator/badge" alt="OpenSSF Scorecard"/></a>
