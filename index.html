@@ -14,6 +14,8 @@
   header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;
     align-items:center;padding:12px 20px;pointer-events:none}
   header h1{font-size:15px;font-weight:600;letter-spacing:.4px}
+  header h1 a{color:var(--txt);text-decoration:none}
+  header h1 a:hover{color:var(--green)}
   header .sub{color:var(--dim);font-size:11px}
   #stat{font-size:11px;color:var(--dim);text-align:right}
   #stat b{color:var(--green);font-weight:600}
@@ -74,7 +76,7 @@
 </head>
 <body>
 <header>
-  <div><h1>devin-office</h1><div class="sub">live session board</div></div>
+  <div><h1><a href="/kanban.html" target="_blank" title="session kanban">devin-office</a></h1><div class="sub">live session board</div></div>
   <div id="stat">connecting…</div>
 </header>
 <svg id="board"></svg>

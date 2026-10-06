@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from swapmon import collect_swap  # noqa: E402
 from ecomon import collect_eco  # noqa: E402
+import sessmon  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 
@@ -51,6 +52,7 @@ HEARTBEAT_FILE = (
     if os.environ.get("OFFICE_HEARTBEAT_FILE") else None
 )
 ACTIVE_WINDOW_S = 15 * 60  # sessão "viva" se teve atividade nos últimos 15 min
+KANBAN_FILE = ROOT / "kanban.json"  # sessões fechadas no board (standalone)
 SUBAGENT_TTL_S = 30 * 60
 WAIT_GRACE_S = 20          # turno "terminado" se última msg é texto puro há >20s
 MAX_FILES = 6
@@ -73,16 +75,9 @@ def jload(s):
 
 def session_locked(sid: str) -> bool:
     """Lock file é mantido (OS-level) enquanto a sessão está aberta num
-    processo devin (GUI ou CLI). Se conseguimos abrir p/ escrita → livre."""
-    f = SESSION_LOCKS / f"{sid}.lock"
-    if not f.exists():
-        return False
-    try:
-        fd = os.open(str(f), os.O_RDWR)
-        os.close(fd)
-        return False
-    except OSError:
-        return True
+    processo devin (GUI ou CLI). POSIX usa flock (locks advisory não falham
+    no open); Windows falha o open enquanto o holder mantém o lock."""
+    return sessmon.lock_held(SESSION_LOCKS, sid)
 
 
 def acp_map() -> dict:
@@ -389,12 +384,21 @@ def collect_state() -> dict:
             "status": e["status"],
         })
 
+    # kanban: todas as sessões não-hidden classificadas (running/blocked/
+    # review/closed). Corre no probe também — o hub re-aplica o closed dele.
+    try:
+        state["sessions"] = sessmon.collect_sessions(
+            db, SESSION_LOCKS, now, sessmon.load_closed(KANBAN_FILE))
+    except Exception as exc:
+        state["sessions_error"] = str(exc)
+
     db.close()
     state["swap"] = collect_swap()
     return state
 
 
 INDEX = (ROOT / "index.html").read_bytes()
+KANBAN_INDEX = (ROOT / "kanban.html").read_bytes()
 STATE_CACHE = {"ts": int(time.time()), "agents": [], "services": {}, "events": [], "loading": True}
 STATE_LOCK = threading.Lock()
 ECO_CACHE = {"eco": None, "ts": 0}
@@ -468,10 +472,50 @@ class Handler(BaseHTTPRequestHandler):
             body = INDEX
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
+        elif self.path.split("?")[0] == "/kanban.html":
+            body = KANBAN_INDEX
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
         else:
             body = b"404"
             self.send_response(404)
             self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        allow = self._cors_origin()
+        if allow:
+            self.send_header("Access-Control-Allow-Origin", allow)
+            self.send_header("Vary", "Origin")
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            pass
+
+    def do_POST(self):
+        """POST /api/kanban {"id": sid, "action": "close"|"open"} — marca a
+        sessão como fechada/reaberta no kanban (persiste em kanban.json)."""
+        if not self.path.startswith("/api/kanban"):
+            body = b"404"
+            self.send_response(404)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            sid = str(payload.get("id") or "")[:80]
+            action = str(payload.get("action") or "")
+            if not sid or action not in ("close", "open"):
+                raise ValueError("id + action=close|open required")
+            out = sessmon.set_closed(KANBAN_FILE, sid, action == "close")
+            body = json.dumps(out).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+        except Exception as exc:
+            body = json.dumps({"error": str(exc)}).encode()
+            self.send_response(400)
+            self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         allow = self._cors_origin()
         if allow:

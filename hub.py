@@ -18,7 +18,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT))
+import sessmon  # noqa: E402
+
 INDEX = (ROOT / "index.html").read_bytes()
+KANBAN_INDEX = (ROOT / "kanban.html").read_bytes()
+KANBAN_FILE = ROOT / "kanban.json"  # sessões fechadas no board (hub side)
 TOKEN = os.environ.get("OFFICE_TOKEN", "")
 BIND = os.environ.get("OFFICE_BIND", "127.0.0.1")
 CONTROL_ENABLED = os.environ.get("OFFICE_CONTROL_ENABLED", "").lower() in {
@@ -168,6 +173,12 @@ def cmd_acks() -> list:
 def current_state() -> dict:
     with STATE_LOCK:
         st = dict(STATE_CACHE)
+    # kanban: os closed persistem aqui (o probe não os conhece)
+    if st.get("sessions"):
+        closed = sessmon.load_closed(KANBAN_FILE)
+        if closed:
+            st["sessions"] = sessmon.apply_closed(
+                [dict(s) for s in st["sessions"]], closed)
     age = time.time() - LAST_INGEST["at"]
     st["probe"] = {
         "lastIngestAgoS": round(age, 1),
@@ -211,6 +222,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, json.dumps({"ok": True, "uptimeHint": LAST_INGEST["at"]}).encode())
         elif self.path in ("/", "/index.html"):
             self._send(200, INDEX, "text/html; charset=utf-8")
+        elif self.path.split("?")[0] == "/kanban.html":
+            self._send(200, KANBAN_INDEX, "text/html; charset=utf-8")
         elif self.path.startswith("/assets/"):
             self._send_static(self.path)
         else:
@@ -229,6 +242,21 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, target.read_bytes(), ctype)
 
     def do_POST(self):
+        if self.path.startswith("/api/kanban"):
+            # marca closed/open no board — state cosmético, sem token gate
+            try:
+                length = int(self.headers.get("Content-Length") or 0)
+                payload = json.loads(self.rfile.read(length) or b"{}")
+                sid = str(payload.get("id") or "")[:80]
+                action = str(payload.get("action") or "")
+                if not sid or action not in ("close", "open"):
+                    raise ValueError("id + action=close|open required")
+                self._send(200, json.dumps(
+                    sessmon.set_closed(KANBAN_FILE, sid,
+                                       action == "close")).encode())
+            except Exception as exc:
+                self._send(400, json.dumps({"error": str(exc)}).encode())
+            return
         if not (self.path.startswith("/api/ingest")
                 or self.path.startswith("/api/cmd")):
             self._send(404, b"404", "text/plain")

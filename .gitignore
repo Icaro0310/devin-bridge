@@ -8,3 +8,5 @@ cmd_inbox/
 outbox/
 state/
 cmd_queue.json
+kanban.json
+kanban.tmp
