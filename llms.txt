@@ -10,7 +10,7 @@ devin-orchestrator solves the problem of uncontrolled (or absent) parallelizatio
 
 ## Key commands
 
-- `pipx install "devin-orchestrator @ git+https://github.com/Icaro0310/devin-orchestrator.git"`: install the planner CLI (Python >= 3.10)
+- `uv tool install devin-fanout  # CLI: devin-orchestrator; or: pipx install devin-fanout`: install the planner CLI (Python >= 3.10)
 - `devin-orchestrator plan '{"kind":"implementation","independent_units":3,"needs_write":true,"estimated_scope":"large","summary":"API + UI + tests"}'`: compute a worker plan as JSON (`workers`, `mode`, `profiles`, `collect`, `limits`)
 - `cp -R devin-orchestrator/.devin/skills/devin-orchestrator .devin/skills/` + `cp devin-orchestrator/.devin/rules/background-workers.md .devin/rules/`: install the skill and always-on rule into a Devin workspace
 - `pytest -q`: behavioral matrix test suite (trivial -> 0, units -> min(N,3), nested -> 0, ...)

@@ -83,13 +83,21 @@ author — this project ships as `devin-fanout` while the CLI stays
 
 ## Install
 
-Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx` with `py -m pip install --user pipx`, run `py -m pipx ensurepath`, then reopen the terminal. **Linux (Debian/Ubuntu):** run `sudo apt install pipx python3-venv` and `pipx ensurepath`; reopen the terminal. Other Linux distributions should install `pipx` using their package manager.
+Python ≥ 3.10 required; install with `uv` (recommended) or `pipx`.
 
-Install the CLI from this repository:
+Install the CLI:
 
 ```bash
-pipx install "git+https://github.com/Icaro0310/devin-orchestrator.git"
+uv tool install devin-fanout
 ```
+
+or with `pipx` (alternative):
+
+```bash
+pipx install devin-fanout
+```
+
+Published on PyPI as `devin-fanout`; the installed CLI is `devin-orchestrator`.
 
 ## Usage
 
