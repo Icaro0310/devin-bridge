@@ -35,7 +35,7 @@ runtime dashboard does not require them.
 
 ![devin-office dashboard — Devin chip with live traces to tools and subagents](assets/demo.png)
 
-Live demo page (static sample data): [icaro0310.github.io/demos/devin-office.html](https://icaro0310.github.io/demos/devin-office.html)
+Demo page (synthetic sample data): [icaro0310.github.io/demos/devin-office.html](https://icaro0310.github.io/demos/devin-office.html)
 
 ## What runs
 
