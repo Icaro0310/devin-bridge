@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Install section now recommends npm `npm install -g @icaro0310/devin-bridge` as the primary route, with `pipx`/source installs documented as alternatives.
+
 - `llms.txt` no longer states a hard-coded ecosystem size; the registry owns the count.
 
 ## [0.1.0] - 2026-09-29
