@@ -59,15 +59,11 @@ policy contract.
 
 Requires Node.js ≥ 20, Git, and an authenticated Devin CLI/Desktop install.
 
-**Windows (PowerShell):**
-
-```powershell
-git clone https://github.com/Icaro0310/devin-bridge.git
-cd devin-bridge
-npm install -g .
+```bash
+npm install -g @icaro0310/devin-bridge
 ```
 
-**Linux:**
+From source (development):
 
 ```bash
 git clone https://github.com/Icaro0310/devin-bridge.git
