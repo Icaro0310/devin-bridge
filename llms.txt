@@ -22,6 +22,6 @@ devin-orchestrator solves the problem of uncontrolled (or absent) parallelizatio
 
 ## Related
 
-- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
 - [poordjaevin](https://github.com/Icaro0310/poordjaevin): calibrated decision layer that can gate risky worker actions
 - [devin-office](https://github.com/Icaro0310/devin-office): live dashboard to watch fanned-out workers and subagents
