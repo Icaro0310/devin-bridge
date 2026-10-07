@@ -22,4 +22,4 @@ Devin Desktop sessions are not scriptable, and community snippets that drive `de
 - Not when: you need agent-side MCP servers (`mcpServers: []` is sent); you cannot tolerate undocumented internals (`acp` mode + `_meta.api_key` auth may change without notice); you want to steal a session already open elsewhere (`session/load` fails `session_locked`).
 
 ## Related
-- [devin-ecosystem](https://icaro0310.github.io/): the 20+ tool ecosystem this belongs to
+- [devin-ecosystem](https://icaro0310.github.io/): the tool ecosystem this belongs to
