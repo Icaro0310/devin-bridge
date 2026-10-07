@@ -59,13 +59,18 @@ does the swap safely.
 
 ## Install
 
-Python ≥ 3.10 and `pipx` are required. **Windows (PowerShell):** install `pipx` with `py -m pip install --user pipx`, run `py -m pipx ensurepath`, then reopen the terminal. **Linux (Debian/Ubuntu):** run `sudo apt install pipx python3-venv` and `pipx ensurepath`; reopen the terminal.
+Requires Python ≥ 3.10 and `pipx` or `uv`. Per-OS setup lives in the platform guides: [Linux](README.linux.md) · [Personal Windows](README.windows.md) · [Corporate Windows](README.corporate-windows.md).
 
-```bash
-pipx install "devin-switch @ git+https://github.com/Icaro0310/devin-switch.git"
-```
-
-(Not published on PyPI yet; the GitHub install above is the supported route.)
+<!-- DIST-STATUS:BEGIN — generated from devin-powerups/registry.json -->
+> **Source-only distribution.** This tool is not yet published to PyPI.
+> Install from source:
+>
+> ```bash
+> pipx install git+https://github.com/Icaro0310/devin-switch.git
+> # or
+> uv tool install git+https://github.com/Icaro0310/devin-switch.git
+> ```
+<!-- DIST-STATUS:END -->
 
 ## Usage
 
