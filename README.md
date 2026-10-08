@@ -14,6 +14,14 @@
 <a href="https://github.com/Icaro0310/devin-office/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
+<!-- DEVIN-ECO:BEGIN -->
+> **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
+> Track: Understand · Nature: product  
+> For: operations, end users  
+> Interface: service / dashboard
+<!-- DEVIN-ECO:END -->
+
+
 # Devin Office
 
 > Unofficial community tooling for Devin. Not affiliated with, endorsed by, or
