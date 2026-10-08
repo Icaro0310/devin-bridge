@@ -15,6 +15,14 @@
 <a href="https://github.com/Icaro0310/devin-orchestrator/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
+<!-- DEVIN-ECO:BEGIN -->
+> **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
+> Track: Control · Nature: product  
+> For: operations, AI engineers  
+> Interface: CLI / automation
+<!-- DEVIN-ECO:END -->
+
+
 # devin-orchestrator
 
 > Unofficial community project; not affiliated with or endorsed by Cognition AI.
