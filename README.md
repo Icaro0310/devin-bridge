@@ -291,5 +291,5 @@ If this saved you debugging time, a ⭐ on the repo helps others find it.
 child) → `sessions.db`. Live vs dead locks, `--dead-only`, `--json`.
 Read-only — nothing is signalled or killed; off-Linux falls back to
 `tasklist`/`ps` with less detail. Tool-call attribution is lock-PID +
-children inference (heuristic); container-level attribution is the
-optional `devin-wisp` add-on.
+children inference (heuristic); container-level attribution is not
+currently shipped.

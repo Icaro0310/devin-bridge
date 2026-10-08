@@ -40,22 +40,27 @@ PROBES = {
 }
 PROBE_TIMEOUT = 0.8
 
-# tool name -> substring matched (case-insensitive) in process command lines.
+# tool name -> substring(s) matched (case-insensitive) in process cmdlines.
+# A tuple means "any of": memory/nlsql/obsidian/gh/ecc were absorbed into the
+# unified MCP server (in-process mux), so their liveness is unified-server.py
+# or, for clients that still spawn them, the standalone script.
 TOOL_PATTERNS = {
     "mcp-hub": "mcp-hub.py",
     "unified-mcp": "unified-server.py",
+    "memory-mcp": ("memory-server.py", "unified-server.py"),
+    "nlsql-mcp": ("nlsql-server.py", "unified-server.py"),
+    "obsidian-mcp": ("obsidian-bridge-server.py", "unified-server.py"),
+    "gh-bridge": ("gh-bridge-server.py", "unified-server.py"),
+    "ecc-bridge": ("ecc-bridge-server.py", "unified-server.py"),
+    "frame-ronin": "frame_ronin",
     "poordjaevin": "poordjaevin",
-    "obsidian-mcp": "obsidian-bridge-server.py",
     "browser-mcp": "browser-server.py",
-    "nlsql-mcp": "nlsql-server.py",
-    "memory-mcp": "memory-server.py",
-    "ecc-bridge": "ecc-bridge-server.py",
     "slack-poll": "slack-poll",
     "devin-daemon": "devin-daemon",
     "office-supervisor": "up.pyw",
     "office-probe": "probe.py",
     "office-executor": "executor.py",
-    "vm-tunnel": "vm-ollama-tunnel",
+    "vm-tunnel": "devin-vm",
     "tailscale": "tailscaled",
 }
 
@@ -148,6 +153,21 @@ def _units() -> dict:
     return units
 
 
+def _registry_names(eco_dir: Path):
+    """Repo names from the powerups registry, or None when unavailable.
+
+    Clones whose name left the registry (absorbed/renamed/archived repos)
+    are counted separately as `retired` instead of inflating `repos`.
+    """
+    reg_path = os.environ.get("OFFICE_REGISTRY_JSON")
+    p = Path(reg_path) if reg_path else eco_dir / "devin-powerups" / "registry.json"
+    try:
+        repos = json.loads(p.read_text(encoding="utf-8"))["repositories"]
+        return {r["name"] for r in repos}
+    except Exception:
+        return None
+
+
 def _meta() -> dict:
     """Contagens de suporte: repos clonados, CLIs pipx, db de sessoes."""
     meta = {}
@@ -159,7 +179,15 @@ def _meta() -> dict:
     ]
     for d in cands:
         if d.is_dir():
-            meta["repos"] = sum(1 for p in d.iterdir() if (p / ".git").exists())
+            clones = {p.name for p in d.iterdir() if (p / ".git").exists()}
+            registry = _registry_names(d)
+            if registry is None:
+                meta["repos"] = len(clones)
+            else:
+                meta["repos"] = len(clones & registry)
+                retired = clones - registry
+                if retired:
+                    meta["retired"] = len(retired)
             break
     bin_dir = Path.home() / ".local" / "bin"
     if bin_dir.is_dir():
@@ -175,8 +203,13 @@ def _meta() -> dict:
 def collect_eco() -> dict:
     now_lines = _proc_cmdlines()
     low = [l.lower() for l in now_lines]
-    tools = {name: any(pat.lower() in l for l in low)
-             for name, pat in TOOL_PATTERNS.items()}
+    tools = {
+        name: any(
+            any(p.lower() in l for l in low)
+            for p in (pat if isinstance(pat, tuple) else (pat,))
+        )
+        for name, pat in TOOL_PATTERNS.items()
+    }
     return {
         HOST_LABEL: {
             "probes": {name: _probe(url) for name, url in PROBES.items()},

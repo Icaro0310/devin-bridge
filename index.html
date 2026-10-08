@@ -298,6 +298,7 @@ function renderEcoPanel(eco){
     const bits=[];
     if(m.repos!=null)bits.push(`${m.repos} repos`);
     if(m.clis!=null)bits.push(`${m.clis} CLIs`);
+    if(m.retired)bits.push(`${m.retired} retired`);
     if(bits.length)html+=`<div class="meta">${esc(bits.join(" · "))}</div>`;
   }
   box.innerHTML=html;
