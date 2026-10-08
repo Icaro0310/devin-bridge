@@ -31,6 +31,25 @@ Use the tool's documented `--data-dir` or `--config-dir` flags for non-default l
 - Corporate Windows is a separate local-only environment.
 - macOS is planned but not claimed as tested.
 
+## Personal Windows specifics
+
+- **Python:** `uv` manages its own Python, which also avoids the Microsoft Store `python.exe` alias stub (it opens the Store instead of running). If you install Python from python.org anyway, tick "Add python.exe to PATH".
+- **Shell:** PowerShell 7 + Windows Terminal is the recommended setup; every command also works in `cmd.exe` and Windows PowerShell 5.1 — none require admin.
+- **Install location:** executables live under `%USERPROFILE%\.local\bin`; data under `%APPDATA%\devin`. Nothing touches `Program Files` or the registry.
+- **WSL:** treat it as a Linux machine — follow [README.linux.md](README.linux.md) inside it.
+- **Uninstall:** `uv tool uninstall <package>` (or `npm uninstall -g` for a Node.js tool) removes the CLI; delete `%APPDATA%\devin` to remove local data. No services or scheduled tasks are left behind.
+
+## Recurring runs (optional)
+
+_Long-running daemon — prefer `systemd --user` service on Linux or a logon trigger (`/sc onlogon`) on Windows, not an interval._
+
+```powershell
+schtasks /create /tn "devin-office" /tr "py daemon.py --port 8788" /sc daily /st 04:00 /f
+```
+
+Runs under your account — no admin needed. Adjust `/sc`/`/st` (or `/sc onlogon` for daemons) to taste.
+
+
 ## Troubleshooting
 
 - Start the daemon from the repository directory with the OS-specific Python launcher shown above.
