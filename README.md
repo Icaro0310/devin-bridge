@@ -16,6 +16,14 @@
 <a href="https://github.com/Icaro0310/devin-bridge/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
+<!-- DEVIN-ECO:BEGIN -->
+> **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
+> Track: Control · Nature: product  
+> For: security engineers, AI engineers  
+> Interface: CLI / bridge
+<!-- DEVIN-ECO:END -->
+
+
 # devin-bridge
 
 > **Unofficial community project.** Not affiliated with, endorsed by, or
