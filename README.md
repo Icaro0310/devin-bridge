@@ -14,7 +14,7 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: operations, maintainers  
+> For: Operations, Maintainers  
 > Interface: CLI
 <!-- DEVIN-ECO:END -->
 
