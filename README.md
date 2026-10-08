@@ -17,8 +17,8 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Understand · Nature: product  
-> For: operations, end users  
-> Interface: service / dashboard
+> For: Operations, End users  
+> Interface: Service / Dashboard
 <!-- DEVIN-ECO:END -->
 
 
