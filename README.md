@@ -3,8 +3,9 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: AI engineers, Developers  
-> Interface: CLI, bridge, service  
+> For: Security engineers, AI engineers  
+> Interface: CLI / Bridge  
+> Path: AI engineers · step 1/3 — before `devin-orchestrator`
 <!-- DEVIN-ECO:END -->
 
 Control how Devin runs: a policy-gated ACP bridge, a background-worker
