@@ -1,0 +1,8 @@
+{
+  "description": "Locked-down corporate profile: remote MCP gateway, conservative cascade, audit hooks.",
+  "notes": [
+    "Auto-execution and auto web requests are disabled; terminal.execute requires approval.",
+    "MCP servers live behind the corporate gateway — credentials are provisioned there, never in this file.",
+    "ACP/local agents disabled per policy; audit hook runs on SessionStart."
+  ]
+}

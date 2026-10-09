@@ -1,0 +1,10 @@
+// Lab MCP overlay — deliberately empty.
+//
+// G3 A/B runs must be hermetic: no MCP servers at all. The memory MCP
+// in particular is OFF entirely (not repointed at a shared or persistent
+// store) so attempt n cannot read notes written by attempt n-1. If a
+// future run needs scratch memory, point a memory server at a disposable
+// per-attempt file instead of enabling a persistent store.
+{
+  "mcpServers": {}
+}

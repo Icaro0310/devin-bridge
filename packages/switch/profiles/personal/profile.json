@@ -1,0 +1,8 @@
+{
+  "description": "Personal workstation profile: local stdio MCP servers, permissive cascade, memory hooks.",
+  "notes": [
+    "Local MCP servers only — memory, filesystem, obsidian; no remote endpoints.",
+    "ACP enabled so the Devin CLI can drive local sessions.",
+    "Hook commands assume ~/bin/devin-hooks exists — adjust before --apply."
+  ]
+}
