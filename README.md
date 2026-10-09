@@ -1,5 +1,17 @@
 # devin-control
 
+<div align="center">
+
+<a href="https://github.com/Icaro0310/devin-control/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-control/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-control"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-control/badge" alt="OpenSSF Scorecard"/></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
+<a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
+<a href="https://github.com/Icaro0310/devin-control"><img src="https://img.shields.io/github/stars/Icaro0310/devin-control" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-control/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-control" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
+<a href="https://github.com/Icaro0310/devin-control/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+</div>
+
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
@@ -24,9 +36,9 @@ the write/control side of the ecosystem.
 
 | Package | Registry | What it does |
 |---|---|---|
-| [`packages/bridge`](packages/bridge) | `@icaro0310/devin-bridge` (npm) | Cross-platform policy-gated ACP bridge for Devin CLI — isolated sessions per project with fail-closed permission rules |
-| [`packages/orchestrator`](packages/orchestrator) | `devin-fanout` (PyPI) | Background-worker fan-out policy: deterministic planner enforcing worker caps, no nesting, collect-before-report |
-| [`packages/switch`](packages/switch) | `devin-switch` (PyPI) | Switch between Devin configuration profiles (hooks, MCP, models) with snapshot and verification |
+| [`packages/bridge`](packages/bridge) | [![@icaro0310/devin-bridge](https://img.shields.io/npm/v/@icaro0310%2fdevin-bridge)](https://www.npmjs.com/package/@icaro0310/devin-bridge) | Cross-platform policy-gated ACP bridge for Devin CLI — isolated sessions per project with fail-closed permission rules |
+| [`packages/orchestrator`](packages/orchestrator) | [![devin-fanout](https://img.shields.io/pypi/v/devin-fanout)](https://pypi.org/project/devin-fanout/) | Background-worker fan-out policy: deterministic planner enforcing worker caps, no nesting, collect-before-report |
+| [`packages/switch`](packages/switch) | `devin-switch` (PyPI, pending publish) | Switch between Devin configuration profiles (hooks, MCP, models) with snapshot and verification |
 | [`packages/office`](packages/office) | source-only | Live Devin activity as an animated SVG circuit board: sessions, subagents, tools |
 
 > **Renamed (Oct 2026):** this repository moved from `Icaro0310/devin-bridge` to `Icaro0310/devin-control` when it became the `devin-control` product workspace. The npm package `@icaro0310/devin-bridge`, the PyPI packages and all console scripts keep their names; stars, issues and history are preserved by the redirect.
