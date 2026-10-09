@@ -20,7 +20,7 @@
 > Track: Control · Nature: product  
 > For: Operations, AI engineers  
 > Interface: CLI / Automation  
-> Path: AI engineers · step 2/3 — after `devin-bridge`, before `devin-memory`
+> Path: AI engineers · step 2/3 — after `devin-bridge`, before `devin-brain`
 <!-- DEVIN-ECO:END -->
 
 
