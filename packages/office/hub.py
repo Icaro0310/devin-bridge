@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
-import sessmon  # noqa: E402
+import sessmon
 
 INDEX = (ROOT / "index.html").read_bytes()
 KANBAN_INDEX = (ROOT / "kanban.html").read_bytes()

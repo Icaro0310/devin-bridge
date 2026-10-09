@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from daemon import SESSION_LOCKS, SESSIONS_DB  # noqa: E402
+from daemon import SESSION_LOCKS, SESSIONS_DB
 
 
 @dataclass
@@ -86,8 +86,9 @@ def _fallback_procs() -> dict:
         if os.name == "nt":
             out = subprocess.run(
                 ["tasklist", "/fo", "csv", "/nh"],
-                capture_output=True, text=True, timeout=10).stdout
-            import csv, io
+                capture_output=True, text=True, timeout=10, check=False).stdout
+            import csv
+            import io
             for row in csv.reader(io.StringIO(out)):
                 if len(row) >= 2 and row[1].isdigit():
                     procs[int(row[1])] = Proc(pid=int(row[1]), ppid=0,
@@ -95,7 +96,7 @@ def _fallback_procs() -> dict:
         else:
             out = subprocess.run(
                 ["ps", "-eo", "pid,ppid,rss,comm"],
-                capture_output=True, text=True, timeout=10).stdout
+                capture_output=True, text=True, timeout=10, check=False).stdout
             for line in out.splitlines()[1:]:
                 parts = line.split(None, 3)
                 if len(parts) == 4 and parts[0].isdigit():

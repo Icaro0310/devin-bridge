@@ -23,8 +23,8 @@ from __future__ import annotations
 import socket
 
 import pytest
-
 from devin_switch import cli
+
 from tests.conftest import cli_argv
 
 

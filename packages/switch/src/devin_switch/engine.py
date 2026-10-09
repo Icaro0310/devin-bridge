@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 from devin_switch import journal
-from devin_switch.paths import Roots, target_for
+from devin_switch.paths import Roots
 from devin_switch.plan import FilePlan
 
 MANIFEST_NAME = "manifest.json"
@@ -211,8 +211,8 @@ def plan_rollback(entry: dict[str, Any], roots: Roots) -> list[RollbackStep]:
                 )
             if expected and sha256_file(copy) != expected:
                 raise SnapshotError(
-                    [f"{rel}: backup copy sha256 mismatch — refusing to "
-                     "restore a corrupted snapshot"],
+                    [(f"{rel}: backup copy sha256 mismatch — refusing to "
+                      "restore a corrupted snapshot")],
                     backup_dir,
                 )
             steps.append(RollbackStep(rel, target, "restore", copy))

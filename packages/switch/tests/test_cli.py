@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from devin_switch import cli
+
 from tests.conftest import cli_argv, write_profile
 
 

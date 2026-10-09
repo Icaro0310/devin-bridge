@@ -340,20 +340,20 @@ class Executor:
                     return ("error", str(exc), sid)
             if session_locked(sid):
                 return ("unsupported",
-                        "worker vive dentro da sessão-mãe, que está locked "
-                        "pela GUI — sem caminho de interrupt", sid)
+                        ("worker vive dentro da sessão-mãe, que está locked "
+                         "pela GUI — sem caminho de interrupt"), sid)
             try:
                 self.acp.load(sid, session_cwd(sid))
                 self.acp.prompt(
                     sid,
-                    f"Stop and do not resume the background subagent "
-                    f"#{int(idx) + 1} ({text or 'the worker'}). Reply briefly.")
+                    (f"Stop and do not resume the background subagent "
+                     f"#{int(idx) + 1} ({text or 'the worker'}). Reply briefly."))
                 return ("interrupt-sent", "pedido de stop enviado ao pai", sid)
             except AcpError as exc:
                 if "already open" in str(exc):
                     return ("unsupported",
-                            "sessão-mãe aberta noutro processo (GUI) — "
-                            "sem caminho de interrupt", sid)
+                            ("sessão-mãe aberta noutro processo (GUI) — "
+                             "sem caminho de interrupt"), sid)
                 return ("error", str(exc), sid)
         # sessão inteira
         if target in self.mine:
@@ -364,8 +364,8 @@ class Executor:
             except AcpError as exc:
                 return ("error", str(exc), target)
         return ("unsupported",
-                "só é possível interromper sessões spawned pelo office "
-                "(as da GUI pertencem ao ACP server dela)", target)
+                ("só é possível interromper sessões spawned pelo office "
+                 "(as da GUI pertencem ao ACP server dela)"), target)
 
     def dispatch(self, cmd):
         cid, action = cmd.get("id"), cmd.get("action")

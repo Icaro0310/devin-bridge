@@ -9,10 +9,10 @@ Actions: ``create`` (target absent), ``modify`` (bytes differ),
 from __future__ import annotations
 
 import difflib
-import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from devin_switch.jsonc import try_load_json_bytes
 from devin_switch.paths import Roots, target_for

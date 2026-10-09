@@ -3,9 +3,7 @@
 import json
 
 import pytest
-
 from devin_orchestrator.planner import MAX_WORKERS, plan_task, plan_task_json
-
 
 # -- required matrix -------------------------------------------------------
 
@@ -177,8 +175,8 @@ def test_units_detail_validation():
 
 
 def test_schemas_shipped_and_loadable():
-    from importlib.resources import files
     import json
+    from importlib.resources import files
     spec = json.loads(
         files("devin_orchestrator").joinpath("spec.schema.json").read_text())
     plan = json.loads(

@@ -8,6 +8,7 @@ Content-crop -> bottom-anchor 48x48 -> sheet office 7x3.
 Rows rpgmaker: 0=down 1=left 2=right 3=up. Office rows: 0=down 1=up 2=right.
 """
 from pathlib import Path
+
 import numpy as np
 from PIL import Image
 from scipy import ndimage

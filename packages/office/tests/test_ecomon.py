@@ -35,8 +35,8 @@ class TestToolPatterns(unittest.TestCase):
 
     def test_vm_tunnel_matches_ssh_forward(self):
         tools = _tools(
-            ["ssh -N -L 11435:localhost:11434 -L 8790:localhost:8790 "
-             "devin-vm -o BatchMode=yes"])
+            [("ssh -N -L 11435:localhost:11434 -L 8790:localhost:8790 "
+              "devin-vm -o BatchMode=yes")])
         self.assertTrue(tools["vm-tunnel"])
 
     def test_no_match_when_absent(self):

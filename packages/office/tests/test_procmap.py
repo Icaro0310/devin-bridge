@@ -1,11 +1,10 @@
 """OF-1: procmap — atribuição processo→sessão (read-only)."""
-import json
 import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import procmap  # noqa: E402
+import procmap
 
 
 def _mk_locks(d: Path, locks: dict) -> Path:

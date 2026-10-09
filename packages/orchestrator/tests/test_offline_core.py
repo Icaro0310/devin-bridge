@@ -29,7 +29,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from devin_orchestrator.cli import main  # noqa: E402
+from devin_orchestrator.cli import main
 
 
 class OfflineCoreError(RuntimeError):

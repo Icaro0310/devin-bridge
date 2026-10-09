@@ -1,9 +1,6 @@
 """CLI surface tests."""
 
 import json
-import subprocess
-import sys
-from pathlib import Path
 
 from devin_orchestrator.cli import main
 

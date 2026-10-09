@@ -80,7 +80,7 @@ def _inside_worker(env: dict[str, str] | None = None) -> bool:
 def _normalise_spec(spec: dict[str, Any]) -> dict[str, Any]:
     """Validate and coerce the input spec; raises ValueError on bad input."""
     if not isinstance(spec, dict):
-        raise ValueError("task spec must be a JSON object")
+        raise ValueError("task spec must be a JSON object")  # noqa: TRY004 - callers/tests catch ValueError
     kind = spec.get("kind", "implementation")
     if kind not in VALID_KINDS:
         raise ValueError(f"kind must be one of {sorted(VALID_KINDS)}")
