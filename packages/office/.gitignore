@@ -1,0 +1,12 @@
+__pycache__/
+*.log
+*.db
+ai-src/
+*.pyc
+.env
+cmd_inbox/
+outbox/
+state/
+cmd_queue.json
+kanban.json
+kanban.tmp
