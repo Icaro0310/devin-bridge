@@ -1,0 +1,27 @@
+// Personal MCP overlay — local stdio servers only.
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "MEMORY_FILE": "~/.local/share/devin-memory/memory.json"
+      },
+      "transport": "stdio"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "~/devin"],
+      "env": {},
+      "transport": "stdio"
+    },
+    "obsidian": {
+      "command": "node",
+      "args": ["~/devin/mcp/obsidian/dist/index.js"],
+      "env": {
+        "OBSIDIAN_VAULT": "~/devin/ObsidianVault"
+      },
+      "transport": "stdio"
+    }
+  }
+}

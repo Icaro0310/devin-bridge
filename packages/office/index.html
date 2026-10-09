@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>devin-office — live session board</title>
+<style>
+  :root{
+    --bg:#0b0e14; --chip:#161b26; --chip-line:#3a4157; --trace:#2a3145;
+    --green:#57d98d; --red:#e86a6a; --txt:#e8eaf2; --dim:#7d86a0; --amber:#e8b44a;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif;overflow:hidden;height:100vh}
+  header{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;justify-content:space-between;
+    align-items:center;padding:12px 20px;pointer-events:none}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.4px}
+  header .sub{color:var(--dim);font-size:11px}
+  #stat{font-size:11px;color:var(--dim);text-align:right}
+  #stat b{color:var(--green);font-weight:600}
+  #stat b.bad{color:var(--red)}
+  svg{position:fixed;inset:0;width:100vw;height:100vh}
+  .arm{stroke:var(--trace);stroke-width:2;fill:none;transition:stroke .4s, opacity .4s}
+  .arm.on{stroke:#2f4a3a}
+  .arm.down{stroke:#4a2f33;stroke-dasharray:5 5}
+  .pad{fill:#1c2130;stroke:var(--chip-line);stroke-width:1.5}
+  .pad.on{stroke:var(--green);fill:#12281c}
+  .pad.down{stroke:var(--red);animation:blink 1.4s infinite}
+  .pulse{fill:var(--green);filter:drop-shadow(0 0 6px var(--green))}
+  .pulse.down{fill:var(--red);filter:drop-shadow(0 0 5px var(--red))}
+  .lbl{font-size:10.5px;fill:var(--dim);letter-spacing:.3px}
+  .lbl.on{fill:#bfe8cf}
+  .lbl.down{fill:#d99}
+  .agent .arm{stroke:#2f4a3a}
+  .agent .pad{stroke:#7ee787}
+  .agent .pulse{fill:#7ee787;filter:drop-shadow(0 0 6px #7ee787)}
+  .agent .lbl{fill:#a9f0b3}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+  #chip-body{fill:var(--chip);stroke:var(--chip-line);stroke-width:2;
+    filter:drop-shadow(0 0 18px rgba(87,217,141,.18))}
+  #chip-txt{font-size:26px;font-weight:800;fill:var(--txt);letter-spacing:3px}
+  .pin{stroke:var(--chip-line);stroke-width:2}
+  #legend{position:fixed;bottom:12px;left:20px;font-size:10.5px;color:var(--dim);z-index:5}
+  .lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin:0 5px 0 14px;vertical-align:middle}
+  .lg.g{background:var(--green)} .lg.b{background:#7ee787} .lg.r{background:var(--red)}
+  /* ---- SwapFile Queue panel ---- */
+  #swapq{position:fixed;right:20px;bottom:12px;z-index:5;width:230px;
+    background:var(--chip);border:1px solid var(--chip-line);border-radius:10px;
+    padding:10px 12px;font-size:10.5px;color:var(--dim);display:none}
+  #swapq .t{font-size:9.5px;letter-spacing:1.2px;color:var(--txt);font-weight:700;margin-bottom:4px}
+  #swapq .bar{height:6px;background:#10141d;border-radius:3px;overflow:hidden;margin:2px 0 6px}
+  #swapq .bar i{display:block;height:100%;background:var(--green);transition:width .6s}
+  #swapq .bar.warn i{background:var(--amber)} #swapq .bar.crit i{background:var(--red)}
+  #swapq .q{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+  #swapq .q .n{color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #swapq .q .v{flex-shrink:0}
+  #swapq .dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--green);margin-right:5px;vertical-align:middle}
+  #swapq .io{margin-top:6px;font-size:9.5px;border-top:1px solid var(--trace);padding-top:5px}
+  #swapq .empty{margin-top:2px;font-style:italic}
+  /* ---- Ecosystem panel ---- */
+  #eco{position:fixed;left:20px;top:64px;bottom:56px;z-index:5;width:250px;overflow-y:auto;
+    background:rgba(22,27,38,.92);border:1px solid var(--chip-line);border-radius:10px;
+    padding:10px 12px;font-size:10.5px;color:var(--dim);display:none;scrollbar-width:thin}
+  #eco .t{font-size:9.5px;letter-spacing:1.2px;color:var(--txt);font-weight:700;margin:8px 0 4px}
+  #eco .t:first-child{margin-top:0}
+  #eco .host{color:var(--amber);font-size:9px;letter-spacing:1px}
+  #eco .q{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+  #eco .q .n{color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #eco .q .v{flex-shrink:0}
+  #eco .d{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  #eco .d.up{background:var(--green)} #eco .d.down{background:var(--red)}
+  #eco .meta{margin-top:8px;font-size:9.5px;border-top:1px solid var(--trace);padding-top:5px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>devin-office</h1><div class="sub">live session board</div></div>
+  <div id="stat">connecting…</div>
+</header>
+<svg id="board"></svg>
+<div id="legend">
+  <span class="lg g"></span>active tool
+  <span class="lg r"></span>down
+  <span class="lg b"></span>subagent (dynamic arm)
+</div>
+<div id="swapq"></div>
+<div id="eco"></div>
+<script>
+const svg=document.getElementById("board"), NS="http://www.w3.org/2000/svg";
+const $=id=>document.getElementById(id);
+const el=(n,at)=>{const e=document.createElementNS(NS,n);for(const k in at)e.setAttribute(k,at[k]);return e;};
+
+// ---------- ferramentas configuráveis (payload opcional /api/eco) ----------
+let TOOLS=[];
+function toolRows(eco){
+  const rows=[];
+  for(const [host,data] of Object.entries(eco||{})){
+    if(!data||typeof data!=="object")continue;
+    for(const [group,states] of Object.entries({probes:data.probes,units:data.units,tools:data.tools})){
+      if(!states||typeof states!=="object")continue;
+      for(const [name,value] of Object.entries(states)){
+        const up=group==="probes"?[200,401,403,406].includes(value):group==="units"?value==="active":!!value;
+        rows.push([`${host}-${group}-${name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${name}`,up]);
+      }
+    }
+    for(const process of data.pm2||[]){
+      // job agendado (pm2 cron_restart) parado = estado esperado, não falha
+      const up=process.status==="online"||!!process.cron;
+      rows.push([`${host}-pm2-${process.name}`.toLowerCase().replace(/[^a-z0-9]+/g,"-"),`${host} · ${process.name}${process.cron?" ⏰":""}`,up]);
+    }
+  }
+  return rows;
+}
+
+// ---------- geometria ----------
+let W,H,CX,CY,R,AR;
+function resize(){W=innerWidth;H=innerHeight;CX=W/2;CY=H/2+14;R=Math.min(W,H)*0.36;AR=Math.min(W,H)*0.24;layout();}
+addEventListener("resize",resize);
+
+// braço estilo PCB: sai do chip, cotovelo a meio caminho, pad + label no fim
+function tracePath(x1,y1,x2,y2,a){
+  const mx=Math.cos(a),my=Math.sin(a);
+  const ex=x1+mx*(R*0.55), ey=y1+my*(R*0.55);           // ponto do cotovelo
+  const kx=(Math.abs(mx)>Math.abs(my))?ex:x2, ky=(Math.abs(mx)>Math.abs(my))?y2:ey;
+  return `M ${x1} ${y1} L ${kx} ${ky} L ${x2} ${y2}`;
+}
+
+// ---------- nós ----------
+const arms=new Map();   // key → {path,pad,pulse,lbl,len,up,agent,...}
+const agentNum=new Map(); // label → número estável (SA-1, SA-2…)
+const usedSlots=new Set();
+function freeSlot(){for(let s=0;s<8;s++)if(!usedSlots.has(s)){usedSlots.add(s);return s}return Math.floor(Math.random()*8)}
+function numFor(l){if(!agentNum.has(l))agentNum.set(l,agentNum.size+1);return agentNum.get(l)}
+
+function chipDraw(){
+  svg.innerHTML="";
+  const g=el("g",{id:"chip"});
+  // pinos decorativos no chip
+  for(let i=-2;i<=2;i++){
+    g.appendChild(el("line",{class:"pin",x1:CX+i*26,y1:CY-58,x2:CX+i*26,y2:CY-46}));
+    g.appendChild(el("line",{class:"pin",x1:CX+i*26,y1:CY+46,x2:CX+i*26,y2:CY+58}));
+    g.appendChild(el("line",{class:"pin",x1:CX-88,y1:CY+i*16,x2:CX-76,y2:CY+i*16}));
+    g.appendChild(el("line",{class:"pin",x1:CX+76,y1:CY+i*16,x2:CX+76,y2:CY+i*16}));
+  }
+  g.appendChild(el("rect",{id:"chip-body",x:CX-78,y:CY-48,width:156,height:96,rx:14}));
+  const t=el("text",{id:"chip-txt",x:CX,y:CY+9,"text-anchor":"middle"});t.textContent="DEVIN";
+  g.appendChild(t);svg.appendChild(g);
+}
+
+function layout(){
+  const agents=LAST||[];
+  chipDraw();
+  arms.clear();usedSlots.clear();
+  const n=TOOLS.length||1;
+  TOOLS.forEach(([id,label],i)=>{
+    const a=-Math.PI/2 + i*(2*Math.PI/n);            // distribui à volta do chip
+    const x0=CX+Math.cos(a)*86, y0=CY+Math.sin(a)*56; // saída na borda do chip
+    const x2=CX+Math.cos(a)*(R), y2=CY+Math.sin(a)*(R);
+    let node=arms.get(id);
+    if(!node){
+      const g=el("g",{id:"arm-"+id});
+      const path=el("path",{class:"arm"});
+      const pad=el("circle",{class:"pad",r:11});
+      const pulse=el("circle",{class:"pulse",r:4});
+      const lbl=el("text",{class:"lbl"});
+      g.append(path,pad,pulse,lbl);svg.appendChild(g);
+      node={id,label,path,pad,pulse,lbl,g,phase:i*0.7,up:false,agent:false,a,x0,y0,x2,y2,len:0};
+      arms.set(id,node);
+    }
+    node.a=a;node.x0=x0;node.y0=y0;node.x2=x2;node.y2=y2;
+    node.path.setAttribute("d",tracePath(x0,y0,x2,y2,a));
+    node.len=node.path.getTotalLength();
+    node.pad.setAttribute("cx",x2);node.pad.setAttribute("cy",y2);
+    const side=Math.cos(a)>=0?1:-1;
+    node.lbl.setAttribute("x",x2+side*16);node.lbl.setAttribute("y",y2+4);
+    node.lbl.setAttribute("text-anchor",side>0?"start":"end");
+    node.lbl.textContent=label;
+  });
+  syncAgents(agents);
+}
+
+// ---------- braços dinâmicos (subagentes) ----------
+function agentKey(l){return "ag-"+l.toLowerCase().replace(/[^a-z0-9]+/g,"-")}
+function syncAgents(list){
+  const want=new Map(list.map(l=>[agentKey(l),{label:l,n:numFor(l)}]));
+  // nascer: braço cresce a partir do chip
+  for(const [k,info] of want){
+    if(arms.has(k))continue;
+    const slot=freeSlot();
+    const a=-Math.PI/2+slot*(Math.PI/4);              // slots na metade superior
+    const x2=CX+Math.cos(a)*AR, y2=CY+Math.sin(a)*AR;
+    const g=el("g",{class:"agent"});
+    const path=el("path",{class:"arm on"});
+    const pad=el("circle",{class:"pad",r:9,cx:x2,cy:y2});
+    const pulse=el("circle",{class:"pulse",r:4});
+    const lbl=el("text",{class:"lbl"});
+    g.append(path,pad,pulse,lbl);svg.appendChild(g);
+    const node={id:k,label:"SA-"+info.n,path,pad,pulse,lbl,g,phase:Math.random()*3,
+      up:true,agent:true,a,slot,x0:CX,y0:CY,x2,y2,len:0,born:performance.now()};
+    node.path.setAttribute("d",tracePath(CX,CY,x2,y2,a));
+    node.len=node.path.getTotalLength();
+    // nasce "a sair" do chip
+    node.path.style.strokeDasharray=node.len;
+    node.path.style.strokeDashoffset=node.len;
+    requestAnimationFrame(()=>{node.path.style.transition="stroke-dashoffset .8s ease";node.path.style.strokeDashoffset=0;});
+    const side=Math.cos(a)>=0?1:-1;
+    lbl.setAttribute("x",x2+side*13);lbl.setAttribute("y",y2+4);
+    lbl.setAttribute("text-anchor",side>0?"start":"end");
+    lbl.textContent=`SA-${info.n} · ${info.label}`;
+    arms.set(k,node);
+  }
+  // morrer: o chip "puxa" o braço de volta
+  for(const [k,node] of [...arms]){
+    if(!node.agent||want.has(k)||node.dying)continue;
+    node.dying=true;
+    node.pulse.style.display="none";
+    node.path.style.transition="stroke-dashoffset .7s ease-in";
+    node.path.style.strokeDasharray=node.len;
+    node.path.style.strokeDashoffset=-node.len;
+    node.pad.style.transition="opacity .5s";node.pad.style.opacity=0;
+    node.lbl.style.transition="opacity .5s";node.lbl.style.opacity=0;
+    setTimeout(()=>{usedSlots.delete(node.slot);node.g.remove();arms.delete(k);},750);
+  }
+}
+
+// ---------- update ----------
+let LAST=[];
+let LAST_STATE={};
+function agentLabels(state){
+  const labels=[];
+  for(const agent of state.agents||[]){
+    if(typeof agent==="string"){labels.push(agent);continue;}
+    if(!agent||typeof agent!=="object")continue;
+    const identity=agent.project||String(agent.id||"").slice(0,8)||"session";
+    const base=`${agent.name||"Devin"} · ${identity}`;
+    labels.push(base);
+    for(const sub of agent.subagents||[]){
+      const name=typeof sub==="string"?sub:(sub.name||sub.agent_id||sub.id||"subagent");
+      labels.push(`${base} · ${name}`);
+    }
+  }
+  return [...new Set(labels)].slice(0,8);
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmtKB(kb){return kb>=1048576?(kb/1048576).toFixed(1)+"G":Math.max(1,Math.round(kb/1024))+"M"}
+// ---------- SwapFile Queue ----------
+function renderSwap(sw){
+  const box=$("swapq");
+  if(!sw||!sw.total_kb){box.style.display="none";return;}
+  box.style.display="block";
+  const pct=Math.min(100,Math.round(100*sw.used_kb/sw.total_kb));
+  const cls=pct>=80?"crit":pct>=50?"warn":"";
+  let html=`<div class="t">SWAPFILE QUEUE · ${fmtKB(sw.used_kb)} / ${fmtKB(sw.total_kb)}</div>`+
+    `<div class="bar ${cls}"><i style="width:${pct}%"></i></div>`;
+  const q=sw.queue||[];
+  if(!q.length)html+=`<div class="empty">queue empty — nothing parked in swap</div>`;
+  for(const p of q.slice(0,8))
+    html+=`<div class="q"><span class="n">${p.shielded?'<span class="dot"></span>':""}${esc(p.name)}</span>`+
+      `<span class="v">${fmtKB(p.swap_kb)}</span></div>`;
+  html+=`<div class="io">in ${fmtKB(sw.in_kbps||0)}/s · out ${fmtKB(sw.out_kbps||0)}/s`+
+    ` · mem avail ${fmtKB(sw.mem_avail_kb||0)}</div>`;
+  box.innerHTML=html;
+}
+function updateStat(){
+  const sessions=(LAST_STATE.agents||[]).length;
+  const services=Object.keys(LAST_STATE.services||{}).length;
+  const healthy=TOOLS.filter(t=>t[2]).length;
+  $("stat").innerHTML=`<b>${sessions}</b> Devin session(s) · <b>${services}</b> service(s)`+
+    (TOOLS.length?` · <b>${healthy}</b>/${TOOLS.length} optional checks up`:"");
+}
+function applyState(state){
+  LAST_STATE=state||{};
+  LAST=agentLabels(LAST_STATE);
+  syncAgents(LAST);
+  updateStat();
+  renderSwap(LAST_STATE.swap);
+}
+function renderEcoPanel(eco){
+  const box=$("eco");
+  if(!eco||typeof eco!=="object"){box.style.display="none";return;}
+  const groups=[["probes","HTTP PROBES"],["tools","PROCESSES"],["units","SCHEDULED"],["pm2","PM2"]];
+  let html="";
+  for(const [host,data] of Object.entries(eco)){
+    if(!data||typeof data!=="object")continue;
+    html+=`<div class="t"><span class="host">${esc(host.toUpperCase())}</span> · ECOSYSTEM</div>`;
+    for(const [g,title] of groups){
+      const entries=g==="pm2"
+        ?(data.pm2||[]).map(p=>[p.name,p.status==="online"||!!p.cron])
+        :Object.entries(data[g]||{}).map(([n,v])=>[n,
+            g==="probes"?[200,401,403,406].includes(v):g==="units"?v==="active":!!v]);
+      if(!entries.length)continue;
+      const up=entries.filter(e=>e[1]).length;
+      html+=`<div class="t">${title} · ${up}/${entries.length}</div>`;
+      for(const [n,ok] of entries)
+        html+=`<div class="q"><span class="n"><span class="d ${ok?"up":"down"}"></span>${esc(n)}</span><span class="v">${ok?"up":"down"}</span></div>`;
+    }
+    const m=data.meta||{};
+    const bits=[];
+    if(m.repos!=null)bits.push(`${m.repos} repos`);
+    if(m.clis!=null)bits.push(`${m.clis} CLIs`);
+    if(m.retired)bits.push(`${m.retired} retired`);
+    if(bits.length)html+=`<div class="meta">${esc(bits.join(" · "))}</div>`;
+  }
+  box.innerHTML=html;
+  box.style.display=html?"block":"none";
+}
+function applyEco(eco){
+  const rows=toolRows(eco);
+  const changed=JSON.stringify(rows)!==JSON.stringify(TOOLS);
+  TOOLS=rows;
+  if(changed)layout();
+  for(const [id,,on] of TOOLS){
+    const node=arms.get(id);if(!node)continue;
+    node.up=on;
+    node.path.classList.toggle("on",on);
+    node.path.classList.toggle("down",!on);
+    node.pad.classList.toggle("on",on);
+    node.pad.classList.toggle("down",!on);
+    node.pulse.classList.toggle("down",!on);
+    node.lbl.classList.toggle("on",on);
+    node.lbl.classList.toggle("down",!on);
+  }
+  renderEcoPanel(eco);
+  updateStat();
+}
+
+// ---------- loop de pulso ----------
+function tick(now){
+  for(const node of arms.values()){
+    if(node.dying)continue;
+    if(node.up||node.agent){
+      const t=((now/1400)+node.phase)%1;
+      const pt=node.path.getPointAtLength(node.len*(node.agent?1-t:t)); // agentes pulsam chip→fora
+      node.pulse.setAttribute("cx",pt.x);node.pulse.setAttribute("cy",pt.y);
+      node.pulse.style.opacity=1;
+    }else{
+      const pt=node.path.getPointAtLength(node.len); // vermelho parado no pad
+      node.pulse.setAttribute("cx",pt.x);node.pulse.setAttribute("cy",pt.y);
+      node.pulse.style.opacity=.9;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+async function poll(){
+  try{
+    const r=await fetch("/api/state",{cache:"no-store"});
+    if(!r.ok)throw new Error("state unavailable");
+    applyState(await r.json());
+  }catch(e){
+    $("stat").innerHTML="<b class='bad'>offline</b> — Devin state unavailable";
+    applyEco(null);
+    return;
+  }
+  try{
+    const r=await fetch("/api/eco",{cache:"no-store"});
+    const data=r.ok?await r.json():null;
+    applyEco(data?.eco||null);
+  }catch(e){applyEco(null);}
+}
+resize();requestAnimationFrame(tick);poll();setInterval(poll,3000);
+</script>
+</body>
+</html>

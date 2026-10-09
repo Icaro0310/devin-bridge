@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Icaro0310/devin-orchestrator/spec.schema.json",
+  "title": "devin-orchestrator task spec",
+  "description": "Structured signals the calling agent supplies to plan_task(). The planner decides *whether* to fan out; the model decides *how* to decompose.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["implementation", "question", "review", "fix", "refactor", "research"],
+      "default": "implementation"
+    },
+    "estimated_scope": {
+      "type": "string",
+      "enum": ["trivial", "small", "medium", "large"],
+      "default": "small"
+    },
+    "independent_units": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 1,
+      "description": "Count of genuinely disjoint work units."
+    },
+    "needs_write": {
+      "type": "boolean",
+      "default": true,
+      "description": "Workers need write access; false selects the read-only profile."
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "units_detail": {
+      "type": "array",
+      "description": "Optional per-unit file declarations used by the disjointness check (OR-4). Paths are declared, never read.",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "files": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1}
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

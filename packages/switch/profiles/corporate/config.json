@@ -1,0 +1,67 @@
+// Corporate overlay for the Devin data-dir config.json.
+// Applied verbatim (whole-file replace) by `devin-switch use corporate`.
+{
+  "models": {
+    "defaultModel": "SWE-16",
+    "secondaryModel": "SWE-16-Fast",
+    "heavyModel": "SWE-16",
+    "disabledModels": []
+  },
+  "cascadeRules": [
+    {
+      "name": "Require Terminal Approval",
+      "description": "Every terminal.execute asks first.",
+      "pattern": "terminal.execute",
+      "action": "ask"
+    },
+    {
+      "name": "Block Auto Web Requests",
+      "description": "No unattended outbound fetches.",
+      "pattern": "web.fetch",
+      "action": "deny"
+    },
+    {
+      "name": "Disable Auto Memory",
+      "description": "Memories are curated, not auto-generated.",
+      "pattern": "memory.create",
+      "action": "deny"
+    }
+  ],
+  "workflows": [],
+  "cascade": {
+    "allowBackground": false,
+    "autoExecution": "disabled",
+    "autoWebRequests": "disabled",
+    "autoContinue": false,
+    "autoGenerateMemories": false,
+    "autoOpenEditedFiles": true,
+    "autoFixLints": false,
+    "disableFastContextAgent": false,
+    "enableCascade": true,
+    "enableCascadeWebTools": false,
+    "gitignoreAccess": true,
+    "windsurfPreview": false,
+    "completionNotifications": true,
+    "alwaysNotifyOnCompletion": false
+  },
+  "agents": {
+    "enableACP": false,
+    "devinLocal": false,
+    "devinCloud": false
+  },
+  "devinForTerminal": { "allow": [], "deny": [], "ask": [] },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "corp-audit session-start",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

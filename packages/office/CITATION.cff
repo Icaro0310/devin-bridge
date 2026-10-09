@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: devin-office
+authors:
+  - family-names: Galvao
+    given-names: Icaro
+url: "https://github.com/Icaro0310/devin-office"
+repository-code: "https://github.com/Icaro0310/devin-office"
+license: MIT
+abstract: "A local-first dashboard that renders live Devin CLI/Desktop sessions and subagents as an animated SVG circuit board, reading Devin's session stores read-only."
+keywords: [dashboard, devin, observability, monitoring, svg, agent-visualization]

@@ -1,0 +1,11 @@
+{
+    "devin.acp.agentPreferences": {
+        "devin-cli": {
+            "mode": "review",
+            "model": "SWE-16"
+        }
+    },
+    "devin.autoContinue": 0,
+    "devin.acp.diffZonesEnabled": true,
+    "window.zoomLevel": 1.0
+}

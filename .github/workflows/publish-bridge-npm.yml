@@ -1,8 +1,8 @@
-name: npm-publish
+name: publish-bridge-npm
 
-# Publishes @icaro0310/devin-bridge to npmjs.com.
+# Publishes @icaro0310/devin-bridge to npmjs.com from packages/bridge.
 # Requires repo secret NPM_TOKEN (granular access token, automation type).
-# Triggers: publishing a GitHub Release, or manual Actions dispatch.
+# Triggers: publishing a GitHub Release tagged bridge-v*, or manual dispatch.
 
 on:
   release:
@@ -14,6 +14,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'bridge-v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -21,7 +22,9 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-      - run: npm test
-      - run: npm publish --access public
+      - working-directory: packages/bridge
+        run: npm test
+      - working-directory: packages/bridge
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

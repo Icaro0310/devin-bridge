@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>devin-office — session kanban</title>
+<style>
+  :root{
+    --bg:#0b0e14; --chip:#161b26; --chip-line:#3a4157; --trace:#2a3145;
+    --green:#57d98d; --red:#e86a6a; --txt:#e8eaf2; --dim:#7d86a0; --amber:#e8b44a;
+    --blue:#6aa9e8;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif;
+    min-height:100vh;display:flex;flex-direction:column}
+  header{display:flex;justify-content:space-between;align-items:center;
+    padding:12px 20px}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.4px}
+  header h1 a{color:var(--txt);text-decoration:none}
+  header h1 a:hover{color:var(--green)}
+  header .sub{color:var(--dim);font-size:11px}
+  #nav{display:flex;gap:14px;align-items:center}
+  #nav a{color:var(--dim);font-size:11px;text-decoration:none}
+  #nav a:hover{color:var(--green)}
+  #stat{font-size:11px;color:var(--dim);text-align:right}
+  #stat b{color:var(--green);font-weight:600}
+  #stat b.bad{color:var(--red)}
+  #cols{flex:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;padding:4px 20px 16px;min-height:0}
+  .col{background:rgba(22,27,38,.6);border:1px solid var(--chip-line);
+    border-radius:10px;display:flex;flex-direction:column;min-height:0}
+  .ch{padding:9px 12px;font-size:10px;letter-spacing:1.2px;font-weight:700;
+    border-bottom:1px solid var(--trace);display:flex;justify-content:space-between}
+  .cards{overflow-y:auto;padding:8px;display:flex;flex-direction:column;
+    gap:7px;scrollbar-width:thin}
+  .card{background:var(--chip);border:1px solid var(--chip-line);
+    border-radius:8px;padding:8px 10px;font-size:11px}
+  .card .ti{color:var(--txt);font-weight:600;line-height:1.3;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+    overflow:hidden}
+  .card .mt{color:var(--dim);font-size:9.5px;margin-top:4px;
+    display:flex;justify-content:space-between;gap:6px;align-items:center}
+  .card .rs{font-size:9px;padding:1px 6px;border-radius:6px;
+    border:1px solid var(--chip-line);white-space:nowrap}
+  .card button{background:none;border:1px solid var(--chip-line);
+    color:var(--dim);border-radius:6px;font-size:9.5px;padding:1px 7px;
+    cursor:pointer;font-family:inherit;flex-shrink:0}
+  .card button:hover{color:var(--txt);border-color:var(--dim)}
+  .empty{color:var(--dim);border:1px dashed var(--chip-line);
+    border-radius:8px;padding:8px 10px;font-size:10px;font-style:italic}
+  .col.running .ch{color:var(--green)} .col.blocked .ch{color:var(--amber)}
+  .col.review .ch{color:var(--blue)} .col.closed .ch{color:var(--dim)}
+  .col.blocked .card{border-color:#5a4a2a}
+  .col.running .card{border-color:#2f4a3a}
+  @media (max-width:900px){#cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1><a href="/" title="live session board">devin-office</a></h1>
+    <div class="sub">session kanban</div></div>
+  <div id="nav">
+    <a href="/" title="pixel-art board">← board</a>
+    <a id="dash" href="#" title="ecosystem dashboard">← dashboard</a>
+    <div id="stat">connecting…</div>
+  </div>
+</header>
+<div id="cols"></div>
+<script>
+const $=id=>document.getElementById(id);
+$("dash").href=location.protocol+"//"+location.hostname+":8900/";
+const KCOLS=[["running","RUNNING"],["blocked","BLOCKED"],["review","REVIEW"],["closed","CLOSED"]];
+let LAST=[];
+const PENDING={};  // id → {status, until} — override otimista pós-click
+const PEND_S=12;
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+function fmtAge(s){if(s<60)return s+"s";if(s<3600)return Math.floor(s/60)+"m";if(s<86400)return Math.floor(s/3600)+"h";return Math.floor(s/86400)+"d"}
+function render(){
+  let html="";
+  for(const [key,label] of KCOLS){
+    const cards=LAST.filter(s=>s.status===key);
+    html+=`<div class="col ${key}"><div class="ch">${label}<span>${cards.length}</span></div><div class="cards">`;
+    for(const s of cards){
+      const act=s.status==="closed"
+        ?`<button onclick="mark('${s.id}',0)">reopen</button>`
+        :`<button onclick="mark('${s.id}',1)">close</button>`;
+      html+=`<div class="card"><div class="ti">${esc(s.title||s.id)}</div>`+
+        `<div class="mt"><span>${esc(s.project||"")} · ${esc(s.model)}</span><span>${fmtAge(s.ageS||0)}</span></div>`+
+        `<div class="mt"><span class="rs">${esc(s.reason||"")}</span>${act}</div></div>`;
+    }
+    if(!cards.length)html+=`<div class="empty">empty</div>`;
+    html+=`</div></div>`;
+  }
+  $("cols").innerHTML=html;
+}
+async function mark(id,close){
+  const status=close?"closed":"review";
+  PENDING[id]={status,until:Date.now()/1000+PEND_S};
+  for(const s of LAST)if(s.id===id){s.status=status;s.reason=close?"closed by user":"reopened";}
+  render();
+  try{
+    await fetch("/api/kanban",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id,action:close?"close":"open"})});
+  }catch(e){}
+}
+function applyPending(){
+  const now=Date.now()/1000;
+  for(const id of Object.keys(PENDING)){
+    if(PENDING[id].until<now){delete PENDING[id];continue;}
+    for(const s of LAST)if(s.id===id&&s.status!==PENDING[id].status)
+      s.status=PENDING[id].status;
+  }
+}
+async function poll(){
+  try{
+    const r=await fetch("/api/state",{cache:"no-store"});
+    if(!r.ok)throw new Error("state unavailable");
+    const d=await r.json();
+    LAST=Array.isArray(d.sessions)?d.sessions:[];
+    applyPending();
+    const open=LAST.filter(s=>s.status!=="closed").length;
+    $("stat").innerHTML=`<b>${open}</b> open · <b>${LAST.length-open}</b> closed`;
+    render();
+  }catch(e){
+    $("stat").innerHTML="<b class='bad'>offline</b> — Devin state unavailable";
+  }
+}
+poll();setInterval(poll,3000);
+</script>
+</body>
+</html>

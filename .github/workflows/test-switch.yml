@@ -1,0 +1,23 @@
+name: test-switch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/switch/**'
+      - '.github/workflows/test-switch.yml'
+  pull_request:
+    paths:
+      - 'packages/switch/**'
+      - '.github/workflows/test-switch.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    uses: Icaro0310/devin-powerups/.github/workflows/python-test.yml@v1
+    with:
+      package-dir: packages/switch

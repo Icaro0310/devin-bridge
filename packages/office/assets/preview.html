@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Devin Office — Race Preview</title>
+<style>
+  body { background:#12141d; color:#e8eaf0; font:13px Consolas,monospace; margin:24px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:900px; }
+  .card { background:#1a1d29; border:1px solid #2a2e42; border-radius:8px; padding:12px; text-align:center; }
+  .spr { width:96px;height:96px; margin:0 auto; background-repeat:no-repeat; background-size:672px 288px; image-rendering:pixelated; }
+  .lbl { margin-top:8px; font-weight:700; }
+  .sub { color:#8a90a6; font-size:11px; }
+  button { background:#2a2e42; color:#e8eaf0; border:1px solid #3a3f5c; padding:6px 14px; border-radius:5px; cursor:pointer; margin:0 4px 16px; }
+  button.on { background:#3d5af1; border-color:#3d5af1; }
+</style></head><body>
+<h2>Race Preview — walk / typing / directions</h2>
+<div>
+  <button id="bwalk" class="on" onclick="mode='walk'">walk</button>
+  <button id="btype" onclick="mode='type'">typing</button>
+  <button id="bdir" onclick="mode='dirs'">directions</button>
+</div>
+<div class="grid" id="g"></div>
+<script>
+const RACES=[["ai_mago","Mago","DEVIN 01"],["ai_druida","Orc Druida"],["ai_arqueiro","Elfo Arqueiro"],
+["ai_paladino","Anjo Paladino"],["ai_feiticeiro","Duende Feiticeiro"],["ai_guerreiro","Anão Guerreiro"],
+["ai_bruxo","Demônio Bruxo"],["ai_artificie","Vampiro Artíficie"],["ai_xama","Lobisomem Xamã"]];
+let mode="walk", tick=0;
+const g=document.getElementById("g");
+for(const [f,label] of RACES){
+  const c=document.createElement("div"); c.className="card";
+  c.innerHTML=`<div class="spr" data-r="${f}" style="background-image:url('chars/${f}.png')"></div>
+    <div class="lbl">${label}</div><div class="sub">${f}.png</div>`;
+  g.appendChild(c);
+}
+const sprs=[...document.querySelectorAll(".spr")];
+const DIRROWS=[0,1,2]; // down,up,right
+setInterval(()=>{
+  tick++;
+  for(const s of sprs){
+    let row=0,frame;
+    if(mode==="walk") frame=tick%4;
+    else if(mode==="type") frame=4+(tick%2);
+    else { row=DIRROWS[Math.floor(tick/3)%3]; frame=tick%4; }
+    s.style.backgroundPosition=`-${frame*96}px -${row*96}px`;
+  }
+  for(const b of document.querySelectorAll("button")) b.classList.remove("on");
+  document.getElementById({walk:"bwalk",type:"btype",dirs:"bdir"}[mode]).classList.add("on");
+},220);
+</script></body></html>
