@@ -23,7 +23,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: ${{ (inputs.package == 'switch' || startsWith(github.ref_name, 'switch-v')) && 'pypi-switch' || 'pypi' }}
     permissions:
       id-token: write
       contents: read
