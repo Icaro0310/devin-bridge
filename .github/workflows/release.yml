@@ -1,0 +1,76 @@
+name: release
+
+# Per-package GitHub releases: a tag `<pkg>-vX.Y.Z` builds, signs and
+# publishes a release for packages/<pkg> only (orchestrator, switch).
+# PyPI publishing is a separate workflow (publish-<pkg>.yml) triggered by
+# the same tag. A `bridge-v*` tag only creates the GitHub Release; the
+# npm workflows (publish-bridge-*.yml) react to release:published.
+# office is source-only and has no tag pattern.
+
+on:
+  push:
+    tags:
+      - "orchestrator-v*"
+      - "switch-v*"
+      - "bridge-v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-python:
+    if: "!startsWith(github.ref_name, 'bridge-v')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Resolve package dir from tag
+        run: echo "PKG_DIR=packages/${GITHUB_REF_NAME%%-v*}" >> "$GITHUB_ENV"
+
+      - name: Build and test
+        run: |
+          python -m pip install -e "${PKG_DIR}[dev]" build
+          python -m pytest -q "$PKG_DIR"
+          python -m build "$PKG_DIR" --outdir "$PKG_DIR/dist"
+
+      - name: Generate SBOM
+        run: pipx run --spec cyclonedx-bom cyclonedx-py environment
+          "$(which python)" --pyproject "$PKG_DIR/pyproject.toml" --mc-type library
+          -o sbom.cdx.json
+
+      - name: Sign artifacts
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "GPG_PRIVATE_KEY not configured; skipping signing"
+            exit 0
+          fi
+          printf '%s' "$GPG_PRIVATE_KEY" | gpg --batch --import
+          KEYID=$(printf '%s' "$GPG_PRIVATE_KEY" | \
+            gpg --batch --import --show-keys --with-colons | \
+            awk -F: '/^fpr/{print $10; exit}')
+          for f in "$PKG_DIR"/dist/* sbom.cdx.json; do
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase "$GPG_PASSPHRASE" \
+              --local-user "$KEYID" --armor --detach-sign "$f"
+          done
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" "$PKG_DIR"/dist/* sbom.cdx.json* --verify-tag --generate-notes
+
+  release-bridge:
+    if: startsWith(github.ref_name, 'bridge-v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish GitHub Release (triggers publish-bridge-* workflows)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.ref_name }}" --verify-tag --generate-notes
