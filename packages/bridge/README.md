@@ -2,18 +2,18 @@
 
 <img src="assets/banner.svg" alt="devin-bridge" width="100%"/>
 
-<a href="https://github.com/Icaro0310/devin-bridge/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/devin-bridge/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
+<a href="https://github.com/Icaro0310/devin-control/actions/workflows/test-bridge.yml"><img src="https://github.com/Icaro0310/devin-control/actions/workflows/test-bridge.yml/badge.svg" alt="tests"/></a>
 
 
-<a href="https://github.com/Icaro0310/devin-bridge/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-bridge/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://github.com/Icaro0310/devin-control/actions/workflows/test-bridge.yml"><img src="https://github.com/Icaro0310/devin-control/actions/workflows/test-bridge.yml/badge.svg" alt="ci"/></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-bridge"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-bridge/badge" alt="OpenSSF Scorecard"/></a>
 <a href="https://deepwiki.com/Icaro0310/devin-bridge"><img src="https://deepwiki.com/badge.svg" alt="DeepWiki"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
-<a href="https://github.com/Icaro0310/devin-bridge"><img src="https://img.shields.io/github/stars/Icaro0310/devin-bridge" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/devin-bridge/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-bridge" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/devin-control"><img src="https://img.shields.io/github/stars/Icaro0310/devin-bridge" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-control/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-bridge" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/devin-bridge/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-control/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -75,7 +75,7 @@ npm install -g @icaro0310/devin-bridge
 From source (development):
 
 ```bash
-git clone https://github.com/Icaro0310/devin-bridge.git
+git clone https://github.com/Icaro0310/devin-control.git
 cd devin-bridge
 npm install -g .
 ```

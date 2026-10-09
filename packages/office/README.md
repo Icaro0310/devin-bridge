@@ -2,16 +2,16 @@
 
 <img src="assets/banner.svg" alt="devin-office" width="100%"/>
 
-<a href="https://github.com/Icaro0310/devin-office/actions/workflows/tests.yml"><img src="https://github.com/Icaro0310/devin-office/actions/workflows/tests.yml/badge.svg" alt="tests"/></a>
+<a href="https://github.com/Icaro0310/devin-control/actions/workflows/test-office.yml"><img src="https://github.com/Icaro0310/devin-control/actions/workflows/test-office.yml/badge.svg" alt="tests"/></a>
 
 
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-office"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-office/badge" alt="OpenSSF Scorecard"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
-<a href="https://github.com/Icaro0310/devin-office"><img src="https://img.shields.io/github/stars/Icaro0310/devin-office" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/devin-office/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-office" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/devin-control"><img src="https://img.shields.io/github/stars/Icaro0310/devin-office" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-control/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-office" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/devin-office/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-control/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -74,7 +74,7 @@ on hosts without `/proc` (e.g. Windows).
 > registry. Run it from a checkout:
 >
 > ```bash
-> git clone https://github.com/Icaro0310/devin-office.git
+> git clone https://github.com/Icaro0310/devin-control.git
 > ```
 <!-- DIST-STATUS:END -->
 
@@ -94,7 +94,7 @@ this repository:
 **Windows (PowerShell):**
 
 ```powershell
-git clone https://github.com/Icaro0310/devin-office.git
+git clone https://github.com/Icaro0310/devin-control.git
 cd devin-office
 py -3 daemon.py --port 8788
 ```
@@ -102,7 +102,7 @@ py -3 daemon.py --port 8788
 **Linux:**
 
 ```bash
-git clone https://github.com/Icaro0310/devin-office.git
+git clone https://github.com/Icaro0310/devin-control.git
 cd devin-office
 python3 daemon.py --port 8788
 ```

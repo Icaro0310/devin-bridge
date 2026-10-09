@@ -13,7 +13,7 @@ Linux uses the extended runtime: local execution plus optional Devin VM/QwenPaw 
 Install the isolated Python CLI:
 
 ```bash
-uv tool install 'https://github.com/Icaro0310/devin-switch/archive/refs/heads/main.tar.gz'
+uv tool install 'git+https://github.com/Icaro0310/devin-control.git#subdirectory=packages/switch'
 ```
 
 ## Devin paths

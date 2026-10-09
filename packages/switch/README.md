@@ -1,14 +1,14 @@
 <div align="center">
 
-<a href="https://github.com/Icaro0310/devin-switch/actions/workflows/ci.yml"><img src="https://github.com/Icaro0310/devin-switch/actions/workflows/ci.yml/badge.svg" alt="ci"/></a>
+<a href="https://github.com/Icaro0310/devin-control/actions/workflows/test-switch.yml"><img src="https://github.com/Icaro0310/devin-control/actions/workflows/test-switch.yml/badge.svg" alt="ci"/></a>
 
 <a href="https://scorecard.dev/viewer/?uri=github.com/Icaro0310/devin-switch"><img src="https://api.scorecard.dev/projects/github.com/Icaro0310/devin-switch/badge" alt="OpenSSF Scorecard"/></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT"/></a>
 <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue" alt="Python 3.10+"/></a>
-<a href="https://github.com/Icaro0310/devin-switch"><img src="https://img.shields.io/github/stars/Icaro0310/devin-switch" alt="GitHub stars"/></a>
-<a href="https://github.com/Icaro0310/devin-switch/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-switch" alt="Last commit"/></a>
+<a href="https://github.com/Icaro0310/devin-control"><img src="https://img.shields.io/github/stars/Icaro0310/devin-switch" alt="GitHub stars"/></a>
+<a href="https://github.com/Icaro0310/devin-control/commits/main"><img src="https://img.shields.io/github/last-commit/Icaro0310/devin-switch" alt="Last commit"/></a>
 <a href="https://github.com/Icaro0310/awesome-devin"><img src="https://img.shields.io/badge/part%20of-devin--*-ecosystem-7c3aed" alt="devin-* ecosystem"/></a>
-<a href="https://github.com/Icaro0310/devin-switch/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
+<a href="https://github.com/Icaro0310/devin-control/issues"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome"/></a>
 </div>
 
 <!-- DEVIN-ECO:BEGIN -->
@@ -74,9 +74,9 @@ Requires Python ≥ 3.10 and `pipx` or `uv`. Per-OS setup lives in the platform 
 > Install from source:
 >
 > ```bash
-> pipx install git+https://github.com/Icaro0310/devin-switch.git
+> pipx install git+https://github.com/Icaro0310/devin-control.git#subdirectory=packages/switch
 > # or
-> uv tool install git+https://github.com/Icaro0310/devin-switch.git
+> uv tool install git+https://github.com/Icaro0310/devin-control.git#subdirectory=packages/switch
 > ```
 <!-- DIST-STATUS:END -->
 

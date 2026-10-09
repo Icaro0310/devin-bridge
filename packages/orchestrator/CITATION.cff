@@ -5,8 +5,8 @@ title: devin-orchestrator
 authors:
   - family-names: Galvao
     given-names: Icaro
-url: "https://github.com/Icaro0310/devin-orchestrator"
-repository-code: "https://github.com/Icaro0310/devin-orchestrator"
+url: "https://github.com/Icaro0310/devin-control"
+repository-code: "https://github.com/Icaro0310/devin-control"
 license: MIT
 abstract: "Background-worker fan-out policy for Devin Desktop: a skill/rule pair plus a deterministic planner CLI that decides how many subagents a task may spawn."
 keywords: [devin, orchestration, subagents, parallelization, policy, planner]

@@ -5,8 +5,8 @@ title: devin-bridge
 authors:
   - family-names: Galvao
     given-names: Icaro
-url: "https://github.com/Icaro0310/devin-bridge"
-repository-code: "https://github.com/Icaro0310/devin-bridge"
+url: "https://github.com/Icaro0310/devin-control"
+repository-code: "https://github.com/Icaro0310/devin-control"
 license: MIT
 abstract: "Policy-gated ACP bridge for Devin CLI: isolated sessions per project with fail-closed permission rules for terminal and filesystem access."
 keywords:
