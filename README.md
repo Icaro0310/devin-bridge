@@ -169,6 +169,6 @@ checked by digest.
 
 ## Related
 
-- [`devin-doctor`](https://github.com/Icaro0310/devin-doctor) — diagnoses
+- [`devin-doctor`](https://github.com/Icaro0310/devin-explore) — diagnoses
   a Devin installation (read-only, always); `devin-switch doctor` covers
   the config-file corner of that space, inline, with no dependency.
