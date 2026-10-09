@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "description": "Three realistic policy fixtures. Tests validate structure and required policy markers only; no model inference, Devin session, database, or network call is performed.",
+  "cases": [
+    {
+      "id": "independent-read-only-research",
+      "prompt": "At the start of a feature session, ask for (a) a read-only inventory of the current authentication entry points and (b) a separate check of the official Devin docs for background-subagent permissions. The investigations are independent; keep the main session available to draft integration notes, and return evidence and file paths.",
+      "expected": {
+        "decision": "delegate_background",
+        "worker_count": 2,
+        "profiles": ["subagent_explore", "subagent_explore"],
+        "nested_workers": false,
+        "parent_collects_and_reports": true
+      }
+    },
+    {
+      "id": "trivial-factual-question",
+      "prompt": "Is 17 an odd number?",
+      "expected": {
+        "decision": "inline_no_worker",
+        "worker_count": 0,
+        "profiles": [],
+        "nested_workers": false,
+        "parent_collects_and_reports": true
+      }
+    },
+    {
+      "id": "mapped-repo-fix-without-publication",
+      "prompt": "In the existing devin-demo repository, the ecosystem .sessions.json entry has the exact canonical cwd and session ID. Fix one isolated configuration typo, run the small existing unit-test suite, and stop. Do not create a new session, hosted repository, remote, commit, or push.",
+      "expected": {
+        "decision": "resume_mapped_session_then_delegate_isolated_change",
+        "repo_session_action": "resume_exact_mapping",
+        "worker_count": 1,
+        "profiles": ["subagent_general"],
+        "nested_workers": false,
+        "heavy_test_jobs_in_parallel": 1,
+        "commit_or_push": false,
+        "parent_collects_and_reports": true
+      }
+    }
+  ]
+}
