@@ -6,7 +6,6 @@ Zero dependencies (stdlib only).
 
 Usage: python daemon.py [--port 8788]
 """
-import glob
 import json
 import os
 import re
@@ -18,9 +17,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from swapmon import collect_swap  # noqa: E402
-from ecomon import collect_eco  # noqa: E402
-import sessmon  # noqa: E402
+import sessmon
+from ecomon import collect_eco
+from swapmon import collect_swap
 
 ROOT = Path(__file__).resolve().parent
 

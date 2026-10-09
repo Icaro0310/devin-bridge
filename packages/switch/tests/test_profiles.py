@@ -7,11 +7,11 @@ import json
 from pathlib import Path
 
 import pytest
-
 from devin_switch import paths
 from devin_switch.jsonc import load_jsonc, strip_jsonc
 from devin_switch.plan import build_plan
 from devin_switch.profiles import discover, get, load_profile
+
 from tests.conftest import write_profile
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

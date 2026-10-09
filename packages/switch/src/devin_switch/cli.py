@@ -17,8 +17,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from devin_switch import engine, journal
 from devin_switch import paths as paths_mod
@@ -212,7 +212,7 @@ def cmd_use(roots: Roots, name: str, apply: bool) -> int:
     try:
         result = engine.apply_plan(name, plans, roots)
     except engine.SnapshotError as exc:
-        print(f"ABORTED — snapshot verification failed; no files written",
+        print("ABORTED — snapshot verification failed; no files written",
               file=sys.stderr)
         for problem in exc.problems:
             print(f"  {problem}", file=sys.stderr)

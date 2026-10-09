@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-import sessmon  # noqa: E402
+import sessmon
 
 DDL = """
 CREATE TABLE sessions (id TEXT PRIMARY KEY, working_directory TEXT NOT NULL,

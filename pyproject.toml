@@ -13,11 +13,20 @@ dependencies = []
 [tool.uv]
 package = false
 
+[tool.ruff]
+# asset-generation one-off scripts, not shipped code
+extend-exclude = ["packages/office/tools"]
+
+[tool.ruff.lint.per-file-ignores]
+# monitoring daemon/collectors are deliberately fail-soft: a probe must never
+# crash the HTTP server
+"packages/office/**" = ["BLE001", "S110", "S112"]
+
 [tool.uv.workspace]
 members = ["packages/orchestrator", "packages/switch"]
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.6"]
 
 [build-system]
 requires = ["setuptools>=68"]

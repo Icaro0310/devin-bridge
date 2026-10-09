@@ -26,9 +26,13 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from daemon import collect_state  # noqa: E402
-from executor import (INBOX, OUTBOX, ensure_dirs, pid_alive, PIDFILE,  # noqa: E402
-                      singleton_alive)
+from daemon import collect_state
+from executor import (
+    INBOX,
+    OUTBOX,
+    ensure_dirs,
+    singleton_alive,
+)
 
 ROOT = Path(__file__).resolve().parent
 EXECUTOR = ROOT / "executor.py"

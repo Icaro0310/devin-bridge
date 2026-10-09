@@ -54,9 +54,7 @@ def _read_meta(root: Path) -> tuple[str, list[str]]:
 def _is_managed_file(path: Path) -> bool:
     if path.name == META_FILENAME:
         return False
-    if path.name.startswith(".") or "__pycache__" in path.parts:
-        return False
-    return True
+    return not (path.name.startswith(".") or "__pycache__" in path.parts)
 
 
 def load_profile(root: Path) -> Profile:

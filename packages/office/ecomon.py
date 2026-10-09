@@ -17,7 +17,6 @@ import csv
 import io
 import json
 import os
-import platform
 import socket
 import subprocess
 import urllib.request
@@ -73,7 +72,7 @@ _TASK_TTL = 30.0
 def _run(cmd: list, timeout: float = 4.0) -> str:
     try:
         out = subprocess.run(
-            cmd, capture_output=True, timeout=timeout,
+            cmd, capture_output=True, timeout=timeout, check=False,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         return out.stdout.decode("utf-8", "replace")
@@ -93,14 +92,14 @@ def _proc_cmdlines() -> list:
         filt = " OR ".join(f"Name='{n}'" for n in names)
         raw = _run([
             "powershell", "-NoProfile", "-Command",
-            f"Get-CimInstance Win32_Process -Filter \"{filt}\" "
-            "| Select-Object -ExpandProperty CommandLine",
+            (f"Get-CimInstance Win32_Process -Filter \"{filt}\" "
+             "| Select-Object -ExpandProperty CommandLine"),
         ], timeout=6.0)
         lines = [l.strip() for l in raw.splitlines() if l.strip()]
         # tailscaled tem cmdline vazia como servico — presenca do nome basta
         if _run(["powershell", "-NoProfile", "-Command",
-                 "(Get-Process tailscaled -ErrorAction SilentlyContinue) "
-                 "-ne $null"], timeout=3.0).strip().lower() == "true":
+                 ("(Get-Process tailscaled -ErrorAction SilentlyContinue) "
+                  "-ne $null")], timeout=3.0).strip().lower() == "true":
             lines.append("tailscaled")
     else:
         raw = _run(["ps", "-eo", "args="])
