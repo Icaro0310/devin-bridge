@@ -1,0 +1,43 @@
+{
+  "name": "@icaro0310/devin-bridge",
+  "version": "0.1.0",
+  "description": "Cross-platform policy-gated ACP bridge for Devin CLI \u2014 isolated sessions per project with fail-closed permission rules.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "devin-bridge": "bin/devin-bridge.js"
+  },
+  "exports": {
+    ".": "./src/acp-client.js",
+    "./acp-client": "./src/acp-client.js",
+    "./policy": "./src/policy.js",
+    "./dispatch": "./src/dispatch.js",
+    "./labels": "./src/labels.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "policy.example.json"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "author": "Icaro0310",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Icaro0310/devin-bridge.git"
+  },
+  "keywords": [
+    "devin",
+    "acp",
+    "agent-client-protocol",
+    "policy",
+    "sessions"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}

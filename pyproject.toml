@@ -1,0 +1,24 @@
+# Workspace root — not itself a published package. Python members live in
+# packages/* (orchestrator, switch). packages/bridge is the Node package
+# (@icaro0310/devin-bridge) managed by the npm workspace; packages/office is
+# a source-only service (no pyproject, not a uv member).
+
+[project]
+name = "devin-control"
+version = "0.0.0"
+description = "Monorepo workspace for the devin-control product: bridge, orchestrator, switch, office."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["packages/orchestrator", "packages/switch"]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
