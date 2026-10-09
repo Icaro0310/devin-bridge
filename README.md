@@ -8,6 +8,16 @@
 > Path: AI engineers · step 1/3 — before `devin-orchestrator`
 <!-- DEVIN-ECO:END -->
 
+<!-- DEVIN-WHERE:BEGIN -->
+## Where this fits
+
+- **Job:** Control
+- **Product:** [`devin-control`](https://github.com/Icaro0310/devin-control)
+- **Packages:** `bridge` · `office` · `orchestrator` · `switch`
+- **Mode:** mixed
+- **Ecosystem:** [`awesome-devin`](https://github.com/Icaro0310/awesome-devin) · registry: [`devin-powerups`](https://github.com/Icaro0310/devin-powerups)
+<!-- DEVIN-WHERE:END -->
+
 Control how Devin runs: a policy-gated ACP bridge, a background-worker
 fan-out planner, config profile switching, and a live activity board —
 the write/control side of the ecosystem.
