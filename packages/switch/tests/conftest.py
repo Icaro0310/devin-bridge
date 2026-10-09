@@ -11,7 +11,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from devin_switch.paths import Roots
 
 CREDENTIALS = (

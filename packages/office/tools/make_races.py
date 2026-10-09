@@ -5,8 +5,9 @@ Base: assets/chars/char_*.png (pixel-agents, MIT) — 112x96 =
 3 linhas (down,up,right) x 7 frames de 16x32. Cabeça ~y2-16, corpo 17-29.
 As features são GRANDES de propósito — legibilidade à distância > subtileza.
 """
-from PIL import Image
 from pathlib import Path
+
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 CHARS = ROOT / "assets" / "chars"
@@ -108,7 +109,7 @@ def wings(p):
         for i in range(d):
             p(i, y, w if i < d - 1 else s)
             p(15 - i, y, w if i < d - 1 else s)
-    for x in range(0, 4):
+    for x in range(4):
         p(x, 12, w); p(15 - x, 12, w)
 
 

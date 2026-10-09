@@ -6,7 +6,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from devin_switch import cli
 from devin_switch.redact import (
     REDACTED,
@@ -16,6 +15,7 @@ from devin_switch.redact import (
     looks_secret,
     mask_line,
 )
+
 from tests.conftest import cli_argv, write_profile
 
 SECRET = "sk-live-a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"  # gitleaks-shaped

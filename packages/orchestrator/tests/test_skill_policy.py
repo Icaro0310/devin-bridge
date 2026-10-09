@@ -5,7 +5,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_PATH = ROOT / ".devin" / "skills" / "devin-orchestrator" / "SKILL.md"
 EVALS_PATH = ROOT / "evals" / "evals.json"

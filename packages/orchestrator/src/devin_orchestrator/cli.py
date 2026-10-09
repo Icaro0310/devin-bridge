@@ -8,8 +8,8 @@ import sys
 from importlib.resources import files
 from pathlib import Path
 
-from devin_orchestrator.planner import plan_task, plan_task_json
 from devin_orchestrator import registry as plan_registry
+from devin_orchestrator.planner import plan_task, plan_task_json
 
 SCHEMA_NAMES = ("spec", "plan")
 

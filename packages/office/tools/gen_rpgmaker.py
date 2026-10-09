@@ -7,11 +7,12 @@ o sheet do office: 7 cols x 3 rows (down/up/right) -> assets/chars/ai_<race>.png
 
 Run: "<venv frame-ronin>/python.exe" gen_rpgmaker.py [race ...]
 """
-import json, sys
+import json
+import sys
 from pathlib import Path
-from PIL import Image
 
 from frame_ronin_mcp.tools.generate import handle_generate_rpgmaker
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "ai-src" / "rpgmaker"

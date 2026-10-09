@@ -9,11 +9,14 @@ Pipeline (igual ao PetDeskSaas gen_pet_pollinations.py):
 Run:  python gen_races_ai.py   (precisa de Pillow + rembg instalados)
 Cache: ai-src/<race>/<pose>_raw.png — re-runs só refazem o que falta.
 """
-import json, time, urllib.parse, urllib.request
+import io
+import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
+
 from PIL import Image
 from rembg import remove as rembg_remove
-import io
 
 ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "ai-src"

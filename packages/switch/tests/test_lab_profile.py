@@ -12,6 +12,7 @@ from pathlib import Path
 from devin_switch import cli, journal
 from devin_switch.jsonc import load_jsonc
 from devin_switch.profiles import get
+
 from tests.conftest import tree_snapshot
 
 REPO_PROFILES = Path(__file__).resolve().parents[1] / "profiles"

@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from devin_switch import cli, journal
+
 from tests.conftest import cli_argv, tree_snapshot
 
 
