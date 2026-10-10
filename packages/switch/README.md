@@ -159,8 +159,8 @@ checked by digest.
 ## Adapters (MCP server, Devin skill, plugin)
 
 `devin_switch.mcp_server` exposes the read-only half of the CLI as MCP
-tools (`switch_list_profiles`, `switch_preview_use`, `switch_diff`,
-`switch_doctor`) via the `devin-switch-mcp` entry point
+tools (`switch_list_profiles`, `switch_preview`, `switch_diff`,
+`switch_status`) via the `devin-switch-mcp` entry point
 (`pip install 'devin-switch[mcp]'`). The write path stays CLI-only for
 a human. Profile descriptions are passed through the same secret
 masking the diff output uses before they reach the MCP client.

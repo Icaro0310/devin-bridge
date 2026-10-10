@@ -19,8 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Read-only adapters: `devin_switch.mcp_server` MCP server
-  (`switch_list_profiles`, `switch_preview_use`, `switch_diff`,
-  `switch_doctor`, `devin-switch-mcp` entry point, `mcp` extra),
+  (`switch_list_profiles`, `switch_preview`, `switch_diff`,
+  `switch_status`, `devin-switch-mcp` entry point, `mcp` extra),
   Devin skill and `adapters/` plugin root. Profile descriptions pass
   through `mask_line` before reaching the MCP client, so a secret in
   `profile.json` free text is never exposed raw.
