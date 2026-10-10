@@ -1,35 +1,17 @@
 # Running devin-office as a service
 
-`devin-office` is a local, read-only dashboard: `daemon.py` polls
-`sessions.db` and serves `WorldState` at `/api/state` plus `index.html`
-(stdlib only, zero dependencies). Running it as a user service just
-formalizes the pattern it already follows.
+`devin-office` is a local dashboard: `daemon.py` polls `sessions.db` and
+serves `WorldState` at `/api/state` plus `index.html` (stdlib only, zero
+dependencies). Running it as a user service just formalizes the pattern
+it already follows.
 
-## systemd (Linux)
+It is *almost* read-only: besides serving data it also exposes
+`POST /api/kanban`, which persists session close/reopen marks to
+`kanban.json`. That is the only write path — the store itself is never
+mutated — and the service binds to localhost, so unattended serving is
+still safe.
 
-```ini
-# ~/.config/systemd/user/devin-office.service
-[Unit]
-Description=devin-office local dashboard (read-only sessions.db)
-After=default.target
+Platform setup lives in the OS-specific guides:
 
-[Service]
-Type=simple
-WorkingDirectory=%h/devin/devin-ecosystem/devin-control/packages/office
-ExecStart=/usr/bin/env python3 %h/devin/devin-ecosystem/devin-control/packages/office/daemon.py --port 8788
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=default.target
-```
-
-```bash
-systemctl --user daemon-reload
-systemctl --user enable --now devin-office.service
-# dashboard at http://localhost:8788
-```
-
-The service is bound to localhost and only ever reads the store —
-there is no mutation path to guard, which is why serving it unattended
-is safe.
+- **Linux (systemd user service):** [daemon-linux.md](daemon-linux.md)
+- **Windows (Task Scheduler):** [daemon-windows.md](daemon-windows.md)

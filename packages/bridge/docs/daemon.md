@@ -1,47 +1,20 @@
-# Running devin-bridge as a service
+# Running devin-bridge intake on a schedule
 
-`devin-bridge` is designed for long-running operation — it is a policy
-frontier (allow/deny/ask, fail-closed) whose mailbox intake and ACP
-sessions only make sense while it stays up. Below is the formalization
-of the pattern that is already expected.
+`devin-bridge` is a one-shot command-line program, not a persistent
+daemon: `devin-bridge intake` drains every file currently in the mailbox
+inbox and exits. Unattended operation therefore means **scheduling
+periodic intakes**, not keeping a process alive — the fail-closed
+policy frontier is enforced inside each run, so a crashed or absent
+schedule simply leaves tasks unprocessed rather than auto-approved.
 
-## systemd (Linux)
+Platform setup lives in the OS-specific guides:
 
-```ini
-# ~/.config/systemd/user/devin-bridge.service
-[Unit]
-Description=devin-bridge ACP policy frontier
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/env node %h/devin/devin-ecosystem/devin-control/packages/bridge/bin/devin-bridge.js --policy %h/.devin/bridge-policy.json
-Restart=on-failure
-RestartSec=5
-# The bridge is fail-closed by design: on crash, intakes deny rather
-# than pass. Restart=on-failure restores the frontier; nothing is
-# auto-approved while it is down.
-
-[Install]
-WantedBy=default.target
-```
-
-```bash
-systemctl --user daemon-reload
-systemctl --user enable --now devin-bridge.service
-journalctl --user -u devin-bridge -f
-```
-
-## Task Scheduler (Windows)
-
-```powershell
-schtasks /create /tn DevinBridge /sc onlogon `
-  /tr "node %USERPROFILE%\devin\devin-ecosystem\devin-control\packages\bridge\bin\devin-bridge.js --policy %USERPROFILE%\.devin\bridge-policy.json"
-```
+- **Linux (systemd user timer):** [daemon-linux.md](daemon-linux.md)
+- **Windows (Task Scheduler):** [daemon-windows.md](daemon-windows.md)
 
 ## Notes
 
-- Policy changes are deliberate edits to the policy file followed by a
-  service restart — never runtime mutation through an agent surface.
+- Policy changes are deliberate edits to the policy file — they take
+  effect on the next scheduled intake, never through runtime mutation.
 - The `read-only` preset (observe-only intake) is the right profile for
   unattended operation; interactive `ask` prompts need a human present.

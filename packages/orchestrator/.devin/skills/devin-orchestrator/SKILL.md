@@ -11,8 +11,8 @@ which orchestration plans exist on record and what their recorded
 outcomes were.
 
 ```bash
-devin-orchestrator history            # counts + records, human-readable
-devin-orchestrator history --json     # same data as JSON
+devin-orchestrator history            # count + per-outcome summary, human-readable
+devin-orchestrator history --json     # summary plus every individual record
 ```
 
 `--registry <path>` reads a non-default `plans.jsonl` location.
