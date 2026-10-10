@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **Docs** — ecosystem journey recuration applied (six curated audiences); stale `Path:` line removed from the devin-bridge eco-block, which is not a registry entry.
 - **CI** — Ruff lint job added (`astral-sh/ruff-action`, pinned);
   monitoring daemons keep documented fail-soft ignores by design.
 - **Publish** — consolidated `pypi-publish.yml` builds and uploads
