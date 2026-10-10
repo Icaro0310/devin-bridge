@@ -96,7 +96,7 @@ this repository:
 
 ```powershell
 git clone https://github.com/Icaro0310/devin-control.git
-cd devin-office
+cd devin-control/packages/office
 py -3 daemon.py --port 8788
 ```
 
@@ -104,7 +104,7 @@ py -3 daemon.py --port 8788
 
 ```bash
 git clone https://github.com/Icaro0310/devin-control.git
-cd devin-office
+cd devin-control/packages/office
 python3 daemon.py --port 8788
 ```
 
