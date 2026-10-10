@@ -14,9 +14,11 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+mcp = ["mcp>=1.2"]
 
 [project.scripts]
 devin-switch = "devin_switch.cli:main"
+devin-switch-mcp = "devin_switch.mcp_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
