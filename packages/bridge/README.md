@@ -20,8 +20,7 @@
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
 > For: Security engineers, AI engineers  
-> Interface: CLI / Bridge  
-> Path: AI engineers · step 1/3 — before `devin-orchestrator`
+> Interface: CLI / Bridge
 <!-- DEVIN-ECO:END -->
 
 

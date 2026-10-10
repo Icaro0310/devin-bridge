@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Docs** — refreshed the generated `Part of the DEVIN ecosystem` block: journey recuration v2 (six paths, zero repeats, `Local-first ops` label, `devin-bridge` in DevOps).
+- **Docs** — ecosystem journey recuration applied (six curated audiences); stale `Path:` line removed from the devin-bridge eco-block, which is not a registry entry.
 - **CI** — Ruff lint job added (`astral-sh/ruff-action`, pinned);
   monitoring daemons keep documented fail-soft ignores by design.
 - **Publish** — consolidated `pypi-publish.yml` builds and uploads
