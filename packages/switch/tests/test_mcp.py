@@ -89,6 +89,19 @@ def test_do_list_profiles_matches_discover(roots):
         assert entry["description"] == found[entry["name"]].description
 
 
+def test_do_list_profiles_masks_secret_in_description(roots, tmp_path):
+    """SEC: a secret someone wrote into profile.json's free-text
+    description reaches the MCP client masked, never raw."""
+    from conftest import write_profile
+    write_profile(roots.profiles_dir, "leaky",
+                  {"hooks.json": "{}"},
+                  description="token=ghp_abc123secretvalue456")
+    out = mcp_server.do_list_profiles(**_kw(roots))
+    entry = next(p for p in out["profiles"] if p["name"] == "leaky")
+    assert "ghp_abc123secretvalue456" not in entry["description"]
+    assert "token=" in entry["description"]  # key kept, value masked
+
+
 def test_do_list_profiles_empty_dir(roots, tmp_path):
     empty = tmp_path / "no-profiles"
     empty.mkdir()

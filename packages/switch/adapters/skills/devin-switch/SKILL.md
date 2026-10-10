@@ -40,9 +40,10 @@ structured as JSON.
 
 ## Rules
 
-- Read-only. Consult, compare and suggest — the apply command stays a
+- Read-only. Consult, compare and suggest — the apply step stays a
   human CLI action. If a change is wanted, the user runs
-  `devin-switch use <profile>` at their own terminal.
+  `devin-switch use <profile>` at their own terminal; that command only
+  previews, and the printed output says how to apply it.
 - Never quote unmasked secrets — the masked output is all you get and
   all you should pass on.
 - `credentials.toml` is never managed nor inspected — by design; do not

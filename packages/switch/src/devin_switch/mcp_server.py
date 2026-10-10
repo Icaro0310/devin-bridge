@@ -25,6 +25,7 @@ from devin_switch.health import check_config_files, rank_profiles
 from devin_switch.paths import Roots
 from devin_switch.plan import build_plan, profile_diff, render_plan
 from devin_switch.profiles import ProfileError, discover, get
+from devin_switch.redact import mask_line
 
 
 def _roots(data_dir: str, config_dir: str, profiles_dir: str) -> Roots:
@@ -91,7 +92,14 @@ def do_list_profiles(
     data_dir: str = "", config_dir: str = "", profiles_dir: str = ""
 ) -> dict:
     """The ``devin-switch list`` payload: every discovered profile with
-    its managed-file count and description."""
+    its managed-file count and description.
+
+    Descriptions are user-authored free text — they may embed a secret
+    someone wrote into ``profile.json``. This surface feeds an MCP
+    client, so the text goes through ``mask_line`` first: key/value
+    secrets, bearer tokens and standalone credential blobs come out
+    redacted instead of raw.
+    """
     roots = _roots(data_dir, config_dir, profiles_dir)
     found = discover(roots.profiles_dir)
     return {
@@ -100,7 +108,7 @@ def do_list_profiles(
             {
                 "name": p.name,
                 "files": len(p.files),
-                "description": p.description,
+                "description": mask_line(p.description),
             }
             for p in found.values()
         ],
