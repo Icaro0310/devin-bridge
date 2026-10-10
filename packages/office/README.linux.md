@@ -51,6 +51,28 @@ _Long-running daemon — prefer `systemd --user` service on Linux or a logon tri
 Equivalent `systemd --user` timer works too; enable lingering if it must run without a login session.
 
 
+## Monitoring caveat: `Restart=` crash-loops are invisible to `--failed`
+
+A unit with `Restart=always|on-failure` that fails on every start never
+reaches the `failed` state — it sits in `activating (auto-restart)`
+forever. `systemctl --failed` prints clean while a service is in a
+thousands-deep crash loop (real incident: probe dead ~21h, restart
+counter >7000, after its `WorkingDirectory` was moved away in a reorg).
+
+To find crash-looping units:
+
+```bash
+systemctl --user list-units --state=activating
+systemctl --user show devin-office-probe -p NRestarts -p ActiveState
+```
+
+The durable guard is not a state listing but an **external freshness
+check**: the hub exposes `probe.lastIngestAgoS` in `GET /api/state`, and
+an independent cron job alerts when the producer stops landing data.
+Producer liveness must never be reported by the producer — a dead probe
+cannot tell you it is dead.
+
+
 ## Troubleshooting
 
 - Start the daemon from the repository directory with the OS-specific Python launcher shown above.
