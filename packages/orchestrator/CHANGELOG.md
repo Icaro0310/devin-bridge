@@ -11,6 +11,12 @@
 
 - Install section now recommends pypi `uv tool install devin-fanout` (CLI stays `devin-orchestrator`) as the primary route, with `pipx`/source installs documented as alternatives.
 
+### Fixed
+
+- `devin_orchestrator.__version__` now reports `0.2.0`, matching
+  `[project].version` in `pyproject.toml`; a `test_version.py` guard and
+  the publish workflow's wheel check keep the two in sync.
+
 ## 0.2.0
 
 - Merged the unpublished `devin-subagent-orchestrator` draft into this repo.
