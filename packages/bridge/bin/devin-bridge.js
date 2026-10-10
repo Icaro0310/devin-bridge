@@ -110,7 +110,7 @@ function interactiveAsker() {
   });
 }
 
-function makeClient(opts, { forPrompt = false } = {}) {
+function makeClient(opts, { forPrompt = false, policy = null } = {}) {
   const askHandler = opts.yes
     ? async () => "allow"
     : (process.stdin.isTTY && process.stderr.isTTY ? interactiveAsker() : null);
@@ -126,7 +126,7 @@ function makeClient(opts, { forPrompt = false } = {}) {
   const acp = new DevinAcp({
     bin: opts.bin || undefined,
     cwd: process.cwd(),
-    policy: loadPolicy(opts),
+    policy: policy || loadPolicy(opts),
     askHandler,
     timeoutMs: opts["timeout-ms"] ? Number(opts["timeout-ms"]) : undefined,
     onNotification,
@@ -279,6 +279,10 @@ const CMDS = {
       ? path.resolve(opts["state-dir"]) : bridgeStateDir();
     const root = mailboxDir(stateDir);
     checkPermissions(path.join(root, "inbox"));
+    // Fail fast on config errors: a missing/invalid --policy aborts the
+    // run here, before any task leaves inbox/, so the next scheduled
+    // run retries the same files once the config is fixed.
+    const policy = loadPolicy(opts);
     const files = listInbox(root);
     const store = loadLabelStore(opts);
     const results = [];
@@ -299,8 +303,9 @@ const CMDS = {
         continue;
       }
       const work = moveTo(root, file, "processing");
-      const acp = makeClient(opts, { forPrompt: true });
+      let acp;
       try {
+        acp = makeClient(opts, { forPrompt: true, policy });
         await acp.init();
         const res = await runTask(acp, repoDir, {
           promptText: t.prompt,
@@ -323,7 +328,7 @@ const CMDS = {
         const dst = moveTo(root, work, "failed");
         fs.writeFileSync(`${dst}.err`, String(e.message) + "\n");
         results.push({ file: name, status: "failed", error: e.message });
-      } finally { acp.stop(); }
+      } finally { acp?.stop(); }
     }
     console.log(JSON.stringify({ mailbox: root, results }, null, 2));
   },

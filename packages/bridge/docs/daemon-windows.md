@@ -5,9 +5,11 @@ Same one-shot model as the Linux timer: a scheduled task runs
 
 ```powershell
 schtasks /create /tn DevinBridgeIntake /sc minute /mo 5 `
-  /tr "node %USERPROFILE%\devin\devin-ecosystem\devin-control\packages\bridge\bin\devin-bridge.js intake --policy %USERPROFILE%\.devin\bridge-policy.json"
+  /tr "cmd /c node %USERPROFILE%\devin\devin-ecosystem\devin-control\packages\bridge\bin\devin-bridge.js intake --policy %USERPROFILE%\.devin\bridge-policy.json >> %USERPROFILE%\.devin\bridge-intake.log 2>&1"
 ```
 
-Each run emits the JSON `{mailbox, results}` report on stdout; check
-`failed` entries and their `.err` files under the mailbox to spot
+Each run appends the JSON `{mailbox, results}` report to
+`%USERPROFILE%\.devin\bridge-intake.log` — Task Scheduler does not
+retain a scheduled command's stdout, hence the `cmd /c` wrapper. Check
+`failed` entries there and their `.err` files under the mailbox to spot
 rejected or errored tasks.

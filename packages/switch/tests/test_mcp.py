@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 import tomllib
-from devin_switch import cli, mcp_server
+from devin_switch import cli, mcp_actions, mcp_server
 from devin_switch.health import check_config_files, rank_profiles
 from devin_switch.plan import build_plan, profile_diff, render_plan
 from devin_switch.profiles import discover, get
@@ -202,20 +202,23 @@ def test_do_preview_unknown_profile_is_error_dict(roots):
 
 def test_mcp_server_source_never_references_write_path():
     """The adapter must not import or name anything on the write path —
-    only read functions from profiles/plan/health are allowed."""
-    src = (Path(mcp_server.__file__)).read_text(encoding="utf-8")
-    for banned in (
-        "apply_plan",
-        "apply_rollback",
-        "plan_rollback",
-        "atomic_write",
-        "engine",
-        "journal",
-        "snapshot",
-        "rollback",
-        "--apply",
-    ):
-        assert banned not in src, f"write-path reference in mcp_server: {banned}"
+    only read functions from profiles/plan/health are allowed. That holds
+    for the wiring (mcp_server) and the payload module (mcp_actions)."""
+    for mod in (mcp_server, mcp_actions):
+        src = (Path(mod.__file__)).read_text(encoding="utf-8")
+        for banned in (
+            "apply_plan",
+            "apply_rollback",
+            "plan_rollback",
+            "atomic_write",
+            "engine",
+            "journal",
+            "snapshot",
+            "rollback",
+            "--apply",
+        ):
+            assert banned not in src, (
+                f"write-path reference in {mod.__name__}: {banned}")
 
 
 def test_registered_tools_are_the_read_surface_only():
@@ -238,13 +241,13 @@ def test_build_server_registers_tools():
     )
     assert mgr is not None
     tools = getattr(mgr, "_tools", mgr)
-    if isinstance(tools, dict):
-        assert set(tools) == {
-            "switch_status",
-            "switch_list_profiles",
-            "switch_diff",
-            "switch_preview",
-        }
+    assert isinstance(tools, dict)
+    assert set(tools) == {
+        "switch_status",
+        "switch_list_profiles",
+        "switch_diff",
+        "switch_preview",
+    }
 
 
 def test_server_entrypoint_in_pyproject():
