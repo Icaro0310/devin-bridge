@@ -18,7 +18,7 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: Operations, AI engineers  
+> For: Local-first ops, AI engineers  
 > Interface: CLI / Automation  
 > Path: AI engineers · step 2/3 — after `devin-control`, before `devin-brain`
 <!-- DEVIN-ECO:END -->

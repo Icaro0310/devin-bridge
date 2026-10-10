@@ -18,7 +18,7 @@
 > For: Security engineers, AI engineers, DevOps engineers  
 > Interface: CLI / Bridge  
 > Path: AI engineers · step 1/3 — before `devin-orchestrator`  
-> Path: DevOps engineers · step 2/3 — after `devin-state`, before `devin-devkit`
+> Path: DevOps engineers · step 2/3 (as `devin-bridge`) — after `devin-state`, before `devin-switch`
 <!-- DEVIN-ECO:END -->
 
 <!-- DEVIN-WHERE:BEGIN -->
