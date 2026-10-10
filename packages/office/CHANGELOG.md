@@ -41,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scheduled PM2 jobs (`cron_restart`, idle between runs) no longer render
   as down — they show a ⏰ marker and count as healthy.
 
+- README quick-start path corrected after the monorepo absorption, and the
+  per-OS launch commands moved out of the shared guide — they live in
+  `README.linux.md` / `README.windows.md` per the platform-docs rule.
+
 ## [0.1.0] - 2026-10-03
 
 ### Added
