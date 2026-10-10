@@ -279,10 +279,13 @@ const CMDS = {
       ? path.resolve(opts["state-dir"]) : bridgeStateDir();
     const root = mailboxDir(stateDir);
     checkPermissions(path.join(root, "inbox"));
-    // Fail fast on config errors: a missing/invalid --policy aborts the
-    // run here, before any task leaves inbox/, so the next scheduled
-    // run retries the same files once the config is fixed.
-    const policy = loadPolicy(opts);
+    // --dry-run skips the policy load: dry-run never builds an ACP
+    // client, so the policy is unused on this path and a missing/invalid
+    // --policy must not block task validation. On a real run the policy
+    // still loads here, before any task leaves inbox/, so a config error
+    // aborts early and the next scheduled run retries the same files
+    // once it is fixed.
+    const policy = opts["dry-run"] ? null : loadPolicy(opts);
     const files = listInbox(root);
     const store = loadLabelStore(opts);
     const results = [];
