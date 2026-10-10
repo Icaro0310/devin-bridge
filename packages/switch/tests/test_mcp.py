@@ -92,7 +92,7 @@ def test_do_list_profiles_matches_discover(roots):
 def test_do_list_profiles_masks_secret_in_description(roots, tmp_path):
     """SEC: a secret someone wrote into profile.json's free-text
     description reaches the MCP client masked, never raw."""
-    from conftest import write_profile
+    from tests.conftest import write_profile
     write_profile(roots.profiles_dir, "leaky",
                   {"hooks.json": "{}"},
                   description="token=ghp_abc123secretvalue456")
