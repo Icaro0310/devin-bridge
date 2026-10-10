@@ -92,21 +92,13 @@ on hosts without `/proc` (e.g. Windows).
 This read-only mode is the simplest way to try the dashboard. From a clone of
 this repository:
 
-**Windows (PowerShell):**
-
-```powershell
-git clone https://github.com/Icaro0310/devin-control.git
-cd devin-control/packages/office
-py -3 daemon.py --port 8788
-```
-
-**Linux:**
-
 ```bash
 git clone https://github.com/Icaro0310/devin-control.git
 cd devin-control/packages/office
-python3 daemon.py --port 8788
 ```
+
+Then start the daemon with the command for your OS — see the
+[Linux](README.linux.md) or [Windows](README.windows.md) guide.
 
 Open `http://localhost:8788`. Stop the server with `Ctrl+C`. It binds to
 loopback and does not write to Devin's databases.
