@@ -14,8 +14,9 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: Operations, Maintainers  
-> Interface: CLI
+> For: Local-first ops, Maintainers, DevOps engineers  
+> Interface: CLI  
+> Path: DevOps engineers · step 3/3 — after `devin-bridge`
 <!-- DEVIN-ECO:END -->
 
 # devin-switch

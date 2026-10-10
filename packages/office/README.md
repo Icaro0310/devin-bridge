@@ -17,8 +17,9 @@
 <!-- DEVIN-ECO:BEGIN -->
 > **Part of the [DEVIN ecosystem](https://github.com/Icaro0310/awesome-devin)**  
 > Track: Control · Nature: product  
-> For: Operations, End users  
-> Interface: Service / Dashboard
+> For: Local-first ops, End users  
+> Interface: Service / Dashboard  
+> Path: Local-first ops · step 3/5 — after `devin-pm`, before `devin-backup`
 <!-- DEVIN-ECO:END -->
 
 
